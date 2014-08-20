@@ -1,0 +1,49 @@
+-- Compiling and running CMU monitors (Dynamic Window Monitor and Z-Test) --
+
+===
+ROSMOP tool parses the monitor specifications and automatically generates monitors. The first thing to do is to compile the ROSMOP tool.
+
+Go to ros_groovy_base/uiuc/rvmaster-c/rosmop directory and call
+	ant
+
+For the monitor generation and the compilation of RVMaster with the generated code, call the script "rosmop" with event specification(s) as input. 
+
+All the CMU monitor specifications are in
+	rosmop/monitors/cmu
+
+To generate monitors:
+	1) all the specifications at once (there should only be .rv files in the folder)
+		rosmop monitors/cmu/
+	2) select specifications
+		rosmop monitors/cmu/cmu_dwm.rv monitors/cmu/cmu_zt.rv
+
+rosmop calls catkin_make after the monitor code is generated and placed in RVMaster, so the compilation is up-to-date with the monitors.
+
+===
+To run RVMaster (along with ROSMaster), call the script (located in ros_groovy_base/uiuc/rvmaster-c/src/rvmaster/scripts)
+	rvcore
+	
+To see the list of available monitors
+	rosrv -list
+	(0 indicates it is not active, 1 indicates it is)
+
+To enable/disable monitors
+	rosrv -enable/disable [monitor_name]	
+
+===
+For the specific purpose of periodic spinning, we chose to have an event in the specification which subscribes to a topic we created. This topic is responsible for triggering the event by sending messages at a desired rate. For this, we call
+	rostopic pub /landshark/uiuc_timeticks/5hz landshark_msgs/BoolStamped '{data: true}' -r 5
+
+Upon being triggered, the event executes the same code that was inside the "while (ros::ok())" block.
+
+On illinois branch, we pushed the files you have shared with us including the cmu_pentagon_demo under ros_groovy_base/cmu directory. To use the same demo setup, we added another launch file called cmu_z_test_demo.launch which basically is the same with cmu_pentagon_demo.launch except it has some commented out lines that call cmu_dynamic_window_monitor.launch and cmu_z_test_monitor.launch. To start the demo
+	cd ros_groovy_base/cmu
+	catkin_make
+	source devel/setup.sh
+	roslaunch cmu_demo cmu_z_test_demo.launch
+	
+This should start the simulator and the demo should look the same, however this time it works with the monitors generated out of specifications. You can also follow the printed out INFO from the terminal running RVMaster.
+
+You can also view the whole process here:
+
+http://youtu.be/wDnbT_w8HcU

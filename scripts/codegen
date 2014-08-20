@@ -1,0 +1,11 @@
+#!/bin/bash
+
+SHDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DIR="$(dirname $SHDIR)"
+
+if [ -f "$DIR/dist/ROSMOP.jar" ];
+then
+   java -cp "$DIR/dist/ROSMOP.jar" rosmop.Main $@
+else
+   echo "Binaries are not created. Call \"ant\" first."
+fi

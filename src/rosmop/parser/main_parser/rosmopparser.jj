@@ -1,0 +1,401 @@
+/* rosmopparser.jj ROS specification */
+
+options {
+	STATIC = false ;
+}
+
+PARSER_BEGIN(ROSMOPParser)
+
+package rosmop.parser.main_parser;
+
+import java.io.*;
+import java.util.*;
+import rosmop.parser.ast.mopspec.*;
+import rosmop.parser.ast.ROSMOPSpecFile;
+
+	public final class ROSMOPParser {
+		private static ROSMOPParser parser;
+
+		public static ROSMOPSpecFile parse(InputStream in) throws ParseException, TokenMgrError {
+			if (parser == null) {
+				parser = new ROSMOPParser(in) ; 
+			} else {				parser.ReInit(in);
+			}
+                      
+			// We need to return some AST node later
+			return parser.ROSMOPSpecFile();
+		}
+
+		public static ROSMOPSpecFile parse(File file) throws ParseException, TokenMgrError {
+			try {
+				FileInputStream in = new FileInputStream(file);
+				try {
+					return parse(in);
+				} finally {
+					in.close();
+				}
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		private String getStringUntil(char ch) throws ParseException {
+    		StringBuffer buf = new StringBuffer();
+    		try {
+	    		for (char next = jj_input_stream.readChar(); next != ch; next = jj_input_stream.readChar()){
+	    			buf.append(next);
+	    			//System.out.println(next);
+	    		}
+    		} catch (Exception e) {
+    			Token t = new Token();
+    			t.beginLine = jj_input_stream.getBeginLine();
+    			t.beginColumn = jj_input_stream.getBeginColumn();    		
+    			throw new ParseException(ch + " is expected");
+    		}
+    		jj_input_stream.backup(1);
+    		//jj_nt = token_source.getNextToken();
+    		return buf.toString().trim();
+    	}
+
+    	private char peek() throws ParseException
+    	{
+    	  	char c;
+			try {
+	    		 c = jj_input_stream.readChar();
+    		} catch (Exception e) {
+    			Token t = new Token();
+    			t.beginLine = jj_input_stream.getBeginLine();
+    			t.beginColumn = jj_input_stream.getBeginColumn();    		
+    			throw new ParseException();
+    		}
+    		jj_input_stream.backup(1);
+    		return c;
+    	}
+
+		private void skipWhitespace() throws ParseException {
+    		try {
+	    		for (char next = jj_input_stream.readChar(); next != ' '; next = jj_input_stream.readChar()){
+	    		}
+    		} catch (Exception e) {
+    			Token t = new Token();
+    			t.beginLine = jj_input_stream.getBeginLine();
+    			t.beginColumn = jj_input_stream.getBeginColumn();    		
+    			throw new ParseException();
+    		}
+    		//jj_input_stream.backup(1);
+    	}
+
+	public static boolean eof = false;
+
+     private String skip_to_matching_brace() {      Token tok;      int nesting = 1;
+      String s = "\n";      while (true) {        tok = getToken(1);        //System.out.println(tok.image);
+        if (tok.image.equals("{"))        {           nesting++;
+           s += tok.image;
+           s += "\n";
+           s += makeIndent(nesting);
+        }        else if (tok.image.equals("}")) {          nesting--;
+		  if (nesting == 0) break;
+          s += "\n"; 
+          s += makeIndent(nesting);
+          s += tok.image;
+        } else        {          s += tok.image + " ";
+          if(tok.image.equals(";"))          {             s += "\n";
+             s += makeIndent(nesting);          }        }        tok = getNextToken();      }
+
+      return s;    }
+
+     private String makeIndent(int n) {
+       String ws = "";
+        for (int i = 0; i < n; i++) {
+            ws+="    ";
+        }
+        return ws;
+    }
+
+    private String parseMatchingParens() throws ParseException {
+        return parseMatchingSegment('(', ')', 1);
+    }
+
+    private String parseMatchingSegment(final char open, final char close, int depth)
+            throws ParseException {
+        try {
+            StringBuilder innerSegment = new StringBuilder();
+            for(int i = 0; i < depth; i++) {
+                innerSegment.append(open);
+            }
+            while(depth > 0) {
+                char c = jj_input_stream.readChar();
+                innerSegment.append(c);
+                if(c == open) {
+                    depth++;
+                } else if(c == close) {
+                    depth--;
+                }
+            }
+            return innerSegment.toString();
+        } catch(IOException ioe) {
+            ioe.printStackTrace();
+            return "";
+        }
+    }
+}
+PARSER_END(ROSMOPParser)
+
+SKIP : {
+    <WHITESPACE: [" ","\t","\r","\n"]>
+    | <LINECOMMENT: "//" (~["\n"])* "\n">
+    | <BLOCKCOMMENT: "/*"(~["*"])* "*"(~["/"] (~["*"])* "*")* "/" >
+}
+
+TOKEN : {		//RESERVED KEYWORDS/CHARACTERS
+		  < EVENT: "event" >
+		| < LBRACE: "{" > 		| < RBRACE: "}" >		| < LPAREN: "(" > 		| < RPAREN: ")" >		| < COMMA: "," >		| < COLON: ":" >
+		| < AT : "@" >		| < SCOLON: ";" >
+		| < EQ: "=" >
+		| < SQUOTE: "'" >		| < COLONCOLON: "::" >
+		| < RAWMONITOR: "rawmonitor" >
+		| < INIT: "init" >
+	    | < ID : (<LETTER>|"_")(<LETTER>|<DIGIT>|"_"|"."|"-")*>
+	    | < DIGIT : ["0"-"9"]>
+	    | < LETTER : ["a"-"z","A"-"Z"]>
+	    | < INCLUDE: "#" ("include" | "define") (~["\n","\r"])+ ("\n"|"\r"|"\r\n")>
+		}
+
+
+TOKEN : {		//Topic and message names			< NAMING: (["A"-"Z", "a"-"z", "0"-"9", "/", "_", "~", "~", "[", "]", "*", ".", "-", "<", ">"])+ >		}
+
+ROSMOPSpecFile ROSMOPSpecFile() :
+{
+	List<ROSMOPSpec> specList = new ArrayList<ROSMOPSpec>();
+
+	String includes = "";
+	Token incl;
+	ArrayList<String> languageModifiers = new ArrayList<String>();
+	Token modifier;
+	String specName = null;
+	String languageParameters = "";
+  	List<ROSBodyDeclaration> declarations = null;
+	String init = "";
+  	ROSEventDefinition event = null;
+  	ArrayList<ROSMOPProperty> properties = new ArrayList<ROSMOPProperty>();
+    ROSMOPProperty myProperty;
+
+	int line = -1, column = -1;
+}
+{
+	( incl = <INCLUDE>
+	  { includes += incl.image.trim() + "\n"; }
+	)*	
+	(		{ ROSMOPSpec spec = new ROSMOPSpec(line, column); }
+	  	(modifier = <ID> {languageModifiers.add(modifier.image);})+
+		{ specName = languageModifiers.get(languageModifiers.size() - 1);
+          languageModifiers.remove(languageModifiers.size() - 1);
+          spec.setName(specName);
+          spec.setLanguageModifiers(languageModifiers);
+        }
+	  	(
+	  	  languageParameters = delimitedNoCurly()
+	  	  { spec.setLanguageParameters(languageParameters); }
+	  	)?
+	  	"{"
+	  			( declarations = ClassOrInterfaceBody() ) { spec.setDeclarations(declarations); }
+	  			[ <INIT> "(" ")" ( init = Block() )	  				{ //System.out.println(init);
+	  					//ROSBlock initblock = new ROSBlock(token.beginLine, token.beginColumn, init, spec.getName());
+	  					spec.setInitblock(init);
+	  				}
+	  			]
+				( LOOKAHEAD( 2 ) event = parseEvent(spec.getName()) { spec.getEvents().add(event); } )+
+				( myProperty = propertyAndHandlers(spec.getName()) {properties.add(myProperty);})*
+
+//WORKING RAW MONITOR
+//				[ <RAWMONITOR> <LPAREN>//				//TODO: change! //				{ char c = peek(); if (c != ')') addParam(); }//				( LOOKAHEAD(2) <COMMA> { skipWhitespace(); addParam(); } )*//				<RPAREN> ( property = Block() ) //<STARTACTION> (<TEXT> { property += token.image; })+  <ENDACTION>//				{ ROSMOPProperty prop = new ROSMOPProperty(token.beginLine, token.beginColumn, "void", "rawmonitor", property, spec.getName()); spec.setProperty(prop); }//				]
+				//ADD AUXILIARY FUNCTION SUPPORT?
+				
+		"}"
+		{ specList.add(spec);}
+	)+
+	<EOF>
+	{
+	  	ROSMOPParser.eof = true;
+		return new ROSMOPSpecFile(line, column, specList, includes);
+	}
+}
+
+ROSEventDefinition parseEvent(String specName):
+{
+	ROSEventDefinition ROSEvent = new ROSEventDefinition(token.beginLine, token.beginColumn);
+	ROSMOPParameters ROSParams = new ROSMOPParameters();
+	ROSMessagePatternCollection patterncol = new ROSMessagePatternCollection();
+	String action = "";
+	//BlockStmt block = null;
+	Token t;
+	char c;
+}
+{
+  < EVENT >
+		<ID> { ROSEvent.setEventName(token.image); } 
+	<LPAREN>
+ 			{ c = peek(); if (c != ')') ROSParams.getParameters().add(addParam()); } ( LOOKAHEAD(2) <COMMA> { skipWhitespace(); ROSParams.getParameters().add(addParam()); } )*
+	<RPAREN>
+		{ ROSEvent.setParameters(ROSParams); }
+	<NAMING> { ROSEvent.setTopicName(token.image); }
+	<NAMING> { ROSEvent.setMessageType(token.image); }
+	<SQUOTE>{ 
+		patterncol = pattern(patterncol, null, ""); 
+        ROSEvent.setPatterns(patterncol.getPatterns()); ROSEvent.setStringifiedPatterns(patterncol.getStringifiedPatterns()); 
+	}<SQUOTE>
+		( action = Block() )  { ROSEvent.setAction(action); }//action
+
+	{ ROSEvent.setSpecName(specName); ROSEvent.setUserDefined(true); return ROSEvent; }
+}
+
+ROSMOPProperty propertyAndHandlers(String specName) : {
+    Token name;
+    Token notAt;
+    String syntax = "";
+    ArrayList<ROSMOPPropertyHandler> propertyHandlers = new ArrayList<ROSMOPPropertyHandler>();
+    ROSMOPPropertyHandler handler;
+    int line = -1, column = -1;
+}
+{
+    { line = token.beginLine; column = token.beginColumn; }    (name = <ID>)
+    ":"
+    {syntax = getStringUntil('@');}
+    (handler = propertyHandler() {propertyHandlers.add(handler);})+
+    { //System.out.println( name.image + ", " + syntax + ", " + specName );
+      return new ROSMOPProperty(line, column, name.image, syntax, propertyHandlers, specName);}
+}
+
+ROSMOPPropertyHandler propertyHandler() : {
+    Token name;
+    String languageAction = "";
+    int line = -1, column = -1;
+}
+{
+    { line = token.beginLine; column = token.beginColumn; }
+    "@"
+    (name = <ID>)
+    (languageAction = Block())
+    { //System.out.println( name.image + ", " + languageAction );
+      return new ROSMOPPropertyHandler(line, column, name.image, languageAction);}
+}
+
+ROSMOPParameter addParam():
+{
+	String paramtype = "", var = "";
+	ROSMOPParameters ROSParams = new ROSMOPParameters();
+	int line = -1, column = -1;
+}
+{  { line = token.beginLine; column = token.beginColumn; }
+  <ID> { paramtype = token.image;} ( <COLONCOLON > <ID> { paramtype += "::" + token.image; })*
+  { ROSType type = new ROSType(line, column, paramtype); }
+  <ID> { var = token.image; }
+  { ROSMOPParameter param = new ROSMOPParameter(line, column, type, var);
+    return param; }
+}
+
+
+ROSMessagePatternCollection pattern(ROSMessagePatternCollection patterncol, ROSMessagePattern complexpattern, String str):
+{
+	ROSMessagePatternCollection patterns = patterncol;
+}
+{
+	"{" 
+		{
+		  	ROSMessagePattern p1 = innerpattern(patterncol, complexpattern, str);
+                        if (p1 != null) {
+			  if(complexpattern == null) {
+			    patterns.getPatterns().put(p1.getVariable(), p1);
+			  } else {
+			    ((ROSMessageComplexPattern) complexpattern).getValueMap().put(p1.getVariable(), p1);
+			  }		
+                        }
+                 } ( LOOKAHEAD(2) <COMMA> {
+		  	ROSMessagePattern p2 = innerpattern(patterncol, complexpattern, str);
+			if(complexpattern == null)
+			{
+				patterns.getPatterns().put(p2.getVariable(), p2);
+			} else
+			{
+				((ROSMessageComplexPattern) complexpattern).getValueMap().put(p2.getVariable(), p2);
+			}
+		} )*
+	"}"
+	{ return patterns; }	 
+}
+
+ROSMessagePattern innerpattern(ROSMessagePatternCollection patterncol, ROSMessagePattern complexpattern, String str):
+{
+ 	ROSMessagePattern pattern = null;
+	String t = null;
+}
+{
+	[<ID> { t = token.image; str += t; }	<COLON> ( ( <ID> {
+					pattern = new ROSMessageBasicPattern(token.beginLine, token.beginColumn, t, token.image);
+					patterncol.getStringifiedPatterns().put((String) token.image, str);
+				}
+			) 
+			| {
+			  	str += ".";
+			  	pattern = new ROSMessageComplexPattern(token.beginLine, token.beginColumn, t, new HashMap<String, ROSMessagePattern>());
+				pattern(patterncol, pattern, str);
+			}
+		) ]
+	{ return pattern; }
+}
+
+List<ROSBodyDeclaration> ClassOrInterfaceBody():
+{
+	List<ROSBodyDeclaration> ret = new LinkedList<ROSBodyDeclaration>();
+	ROSBodyDeclaration member;
+}
+{
+  ( LOOKAHEAD(2) member = ClassOrInterfaceBodyDeclaration() { ret.add(member); } )*
+  { return ret; }
+}
+
+ROSBodyDeclaration ClassOrInterfaceBodyDeclaration():
+{
+   ROSBodyDeclaration ret;
+}
+{
+	ret = FieldDeclaration()
+	{ return ret; }
+}
+
+ROSFieldDeclaration FieldDeclaration():
+{
+	String type;
+	ArrayList<ROSVariableDeclarator> variables = new ArrayList<ROSVariableDeclarator>();
+	ROSVariableDeclarator val;
+}
+{
+  <ID> {type = token.image;} [<COLONCOLON > <ID> {type += "::" + token.image; }]
+        val = VariableDeclarator() { variables.add(val); } 
+  ( "," val = VariableDeclarator() { variables.add(val); } )* <SCOLON>
+  
+  { return new ROSFieldDeclaration(token.beginLine, token.beginColumn, type, variables); }
+}
+
+ROSVariableDeclarator VariableDeclarator():
+{
+	String id = null;
+	String init = null;
+}
+{
+  <ID> {id = token.image;} [ <EQ> <ID> {init = token.image;} ]
+  { return new  ROSVariableDeclarator(token.beginLine, token.beginColumn, id, init); }
+}
+
+String Block():{	String block = "";}{  "{"
+  { block = skip_to_matching_brace();
+  	//System.out.println(block);
+  }  "}"
+  {    return block;  }  }
+
+String delimitedNoCurly() : {
+
+}
+{
+    ("(" { return parseMatchingParens(); })
+}
