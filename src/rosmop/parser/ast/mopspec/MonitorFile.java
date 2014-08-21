@@ -1,7 +1,6 @@
 package rosmop.parser.ast.mopspec;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -10,20 +9,20 @@ import java.util.List;
  */
 public class MonitorFile {
     
-    private final String preamble;
-    private final List<Specification> specifications;
+    private String preamble;
+    private List<Specification> specifications;
+    
+    public MonitorFile() {
+		this.specifications = new ArrayList<Specification>();
+	}
     
     /**
      * Construct a MonitorFile out of the preamble and some specifications.
      * @param preamble Declarations at the beginning of the file, e.g. imports.
      */
-    public MonitorFile(final String preamble, final List<Specification> specifications) {
-        this.preamble = preamble;
-        if(specifications.size() == 0) {
-            throw new RuntimeException("RVM files must have at least one specification.");
-        }
-        this.specifications = 
-            Collections.unmodifiableList(new ArrayList<Specification>(specifications));
+    public MonitorFile(String preamble, List<Specification> specifications) {
+    	this.preamble = preamble;
+        this.specifications = specifications;
     }
     
     /**
@@ -34,6 +33,10 @@ public class MonitorFile {
         return preamble;
     }
     
+    public void addPreamble(String includeDeclarations) {
+		this.preamble += "\n" + includeDeclarations;
+	}
+    
     /**
      * An unmodifiable list of the specifications in the monitoring file.
      * @return A list of the specifications.
@@ -41,5 +44,17 @@ public class MonitorFile {
     public List<Specification> getSpecifications() {
         return specifications;
     }
+    
+    public void addSpecifications(List<Specification> specifications) {
+		this.specifications.addAll(specifications);
+	}
+
+	public void setPreamble(String preamble) {
+		this.preamble = preamble;
+	}
+
+	public void setSpecifications(List<Specification> specifications) {
+		this.specifications = specifications;
+	}
     
 }

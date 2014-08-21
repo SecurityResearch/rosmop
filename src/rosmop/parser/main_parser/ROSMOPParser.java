@@ -16,14 +16,19 @@ import rosmop.parser.ast.mopspec.*;
  * @author A. Cody Schuffelen
  */
 public class ROSMOPParser implements ROSMOPParserConstants {
-
+  private static ROSMOPParser parser;
+  public static boolean eof = false;
     /**
      * Parse a complete RVM file specification.
      * @param s The text of the file.
      * @return The parsed file as a Java object.
      */
     public static MonitorFile parse(final String s) {
-        return parse(new BufferedReader(new StringReader(s)));
+        try {
+                return parse(new InputStreamReader(new FileInputStream(s)));
+        } catch (IOException e) {
+                        throw new RuntimeException(e);
+                }
     }
 
     /**
@@ -32,9 +37,13 @@ public class ROSMOPParser implements ROSMOPParserConstants {
      * @return The parsed file as a Java object.
      */
     public static MonitorFile parse(final Reader reader) {
-        ROSMOPParser parser = new ROSMOPParser(reader);
+        if (parser == null)
+                        parser = new ROSMOPParser(reader);
+                else
+                        parser.ReInit(reader);
+
         try {
-            return parser.rvmFile();
+            return parser.rvFile();
         } catch(ParseException e) {
             throw new RuntimeException(e);
         } catch(TokenMgrError e) {
@@ -192,7 +201,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
         }
     }
 
-  final public MonitorFile rvmFile() throws ParseException {
+  final public MonitorFile rvFile() throws ParseException {
     String preamble;
     ArrayList<Specification> specs = new ArrayList<Specification>();
     Specification spec;
@@ -210,6 +219,8 @@ public class ROSMOPParser implements ROSMOPParserConstants {
         break label_1;
       }
     }
+    jj_consume_token(0);
+        ROSMOPParser.eof = true;
         {if (true) return new MonitorFile(preamble, specs);}
     throw new Error("Missing return statement in function");
   }
