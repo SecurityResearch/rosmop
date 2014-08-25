@@ -17,6 +17,7 @@ import rosmop.parser.ast.mopspec.ROSFieldDeclaration;
 import rosmop.parser.ast.mopspec.ROSMOPSpec;
 import rosmop.parser.ast.mopspec.ROSVariableDeclarator;
 import rosmop.parser.ast.mopspec.Specification;
+import rosmop.parser.ast.mopspec.Variable;
 import rosmop.parser.main_parser.ROSMOPParser;
 import rosmop.util.Tool;
 
@@ -243,19 +244,11 @@ public class Main {
 		for (Specification spec : specFile.getSpecifications()) {
 			for (Event event : spec.getEvents()) {
 				if (!events.add(event.getName())) return false;
-
-				//				TODO: handle declarations as fielddecl in event, 
-				//				then check for duplicates!!
-				//				this way you dont have to keep decls in specfile
-				//				if(!declarations.add(event.getDefinition())) return false;
 			}
-
-			//			for (ROSBodyDeclaration declaration : spec.getDeclarations()) {
-			//				ROSFieldDeclaration field = (ROSFieldDeclaration) declaration;
-			//				for(ROSVariableDeclarator variable : field.getVariables()){
-			//					if (!declarations.add(variable.getId())) return false;
-			//				}
-			//			}
+			
+			for (Variable var : spec.getSpecDeclarations()) {
+				if(!declarations.add(var.getDeclaredName())) return false;
+			}
 		}
 
 		return true;

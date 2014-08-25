@@ -260,7 +260,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     }
     jj_consume_token(LBRACE);
          languageDeclarations = parseUntilLineMatches(Pattern.compile(
-            "^([-a-zA-Z\u005c\u005cs_]*)event([a-zA-Z_\u005c\u005cs0-9]+)\u005c\u005c("));
+            "^([-a-zA-Z\u005c\u005cs_]*)(init|event([a-zA-Z_\u005c\u005cs0-9]+))\u005c\u005c("));
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case INIT:
       jj_consume_token(INIT);
@@ -345,16 +345,14 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     }
     eventDefinition = delimitedSegment();
     topic = jj_consume_token(NAMING);
-                       System.out.println(topic.image);
     msgType = jj_consume_token(NAMING);
-                             System.out.println(msgType.image);
     jj_consume_token(17);
-         pattern = parseUntil("'"); System.out.println(pattern);
+         pattern = parseUntil("'"); /*System.out.println(pattern);*/
     jj_consume_token(17);
     jj_consume_token(LBRACE);
          eventAction = parseMatchingCurlyBrackets();
      {if (true) return new Event(modifiers, name.image, definitionModifiers, eventDefinition, topic.image,
-        eventAction);}
+        msgType.image, pattern, eventAction);}
     throw new Error("Missing return statement in function");
   }
 

@@ -10,14 +10,16 @@ import java.util.List;
  */
 public class Specification {
     
-//	TODO: init block
     private final String preDeclarations;
     private final List<String> languageModifiers;
     private final String name;
     private final String languageParameters;
-    private final String languageDeclarations;
+    private String languageDeclarations;
+    private final String init;
     private final List<Event> events;
     private final List<Property> properties;
+    
+    private List<Variable> specDeclarations;
     
     /**
      * Construct the specification out of its children elements.
@@ -25,7 +27,7 @@ public class Specification {
      * @param name The name of the specification.
      * @param languageParameters Parameters used to parameterize the monitor.
      * @param languageDeclarations Language-specific declarations used in the monitoring code.
-     * @param init 
+     * @param init Initialization block for language declarations
      * @param events The events to monitor in the code.
      * @param properties Properties and handlers on the sequence of events.
      */
@@ -38,11 +40,30 @@ public class Specification {
         this.name = name;
         this.languageParameters = languageParameters;
         this.languageDeclarations = languageDeclarations;
+        this.init = init;
         this.events = Collections.unmodifiableList(new ArrayList<Event>(events));
         this.properties = Collections.unmodifiableList(new ArrayList<Property>(properties));
+        
+        declarify();
     }
     
-    /**
+    private void declarify() {
+    	languageDeclarations = languageDeclarations.trim();
+//    	TODO: get rid of multiline comments!!
+		String[] vars = languageDeclarations.trim().split(";");
+		if(!languageDeclarations.isEmpty()){
+			specDeclarations = new ArrayList<Variable>();
+			for (String string : vars) {
+				if(string.trim().startsWith("//")) continue;
+				specDeclarations.add(new Variable(string.trim()));
+			}
+		}
+	}
+    
+//    TODO: getallmsgtypes to include them in the header file as dependencies
+//    		necessary??
+
+	/**
      * An unmodifiable list of words used to affect the code generator.
      * @return Words affecting the code generator.
      */
@@ -74,7 +95,15 @@ public class Specification {
         return languageDeclarations;
     }
     
-    /**
+    public List<Variable> getSpecDeclarations() {
+		return specDeclarations;
+	}
+
+	public String getInit() {
+		return init;
+	}
+
+	/**
      * An unmodifiable list with the events to monitor.
      * @return The events being monitored by the generated monitor program.
      */
