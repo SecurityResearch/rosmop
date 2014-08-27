@@ -49,7 +49,7 @@ public class Specification {
     
     private void declarify() {
     	languageDeclarations = languageDeclarations.trim();
-//    	TODO: get rid of multiline comments!!
+    	languageDeclarations = languageDeclarations.replaceAll("(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)","");
 		String[] vars = languageDeclarations.trim().split(";");
 		if(!languageDeclarations.isEmpty()){
 			specDeclarations = new ArrayList<Variable>();

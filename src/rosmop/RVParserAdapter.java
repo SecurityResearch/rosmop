@@ -21,12 +21,6 @@ public class RVParserAdapter implements CSpecification {
     public RVParserAdapter(final MonitorFile file) {
         this.file = file;
         wrapped = file.getSpecifications().get(0);
-        for(Event event : wrapped.getEvents()) {
-            String params = event.getDefinition().trim();
-            if(params.charAt(0) != '(' || params.charAt(params.length()-1) != ')') {
-                throw new RuntimeException("C event parameters must begin and end with ( and )");
-            }
-        }
     }
     
     @Override

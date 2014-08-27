@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * An event monitored in the output program.
@@ -20,8 +22,8 @@ public class Event {
 
 	private List<Variable> parameters;
 	private HashMap<String, String> patternMap;
-	
-//	TODO: need specname??
+
+	//	TODO: need specname??
 
 
 	/**
@@ -49,8 +51,9 @@ public class Event {
 
 	private void parameterize() {
 		definition = definition.substring(1, definition.length()-1);
+		// get rid of multiline comments!!
+		definition = definition.replaceAll("(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)","");
 		String[] vars = definition.trim().split(",");
-//		TODO: get rid of multiline comments!!
 		if(!definition.isEmpty()){
 			parameters = new ArrayList<Variable>();
 			patternMap = new HashMap<String, String>();
@@ -63,8 +66,9 @@ public class Event {
 
 	private void matchParametersToPattern() {
 		pattern = pattern.substring(1, pattern.length()-1);
+		// get rid of multiline comments!!
+		pattern = pattern.replaceAll("(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)","");
 		String[] pairs = pattern.trim().split(",");
-//		TODO: get rid of multiline comments!!
 		String msgField, varName;
 		if(!pattern.isEmpty()){
 			patternMap = new HashMap<String, String>();
@@ -75,11 +79,11 @@ public class Event {
 				msgField = string.trim();
 
 				patternMap.put(varName, msgField);
-//				System.out.println(msgField + ":" + varName);
+				//				System.out.println(msgField + ":" + varName);
 			}
 		}
 	}
-	
+
 	public String classifyMsgType() {
 		return msgType.replace("/", "::");
 	}
