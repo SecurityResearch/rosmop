@@ -4,7 +4,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -95,7 +101,7 @@ public class Main {
 
 			CSpecification rvcParser = (CSpecification) new RVParserAdapter(readyToProcess);
 			LogicRepositoryData cmgDataOut = sendToLogicRepository(rvcParser, logicPluginDirPath);
-			outputCode(cmgDataOut, rvcParser, pathToOutputNoExt);  
+//			outputCode(cmgDataOut, rvcParser, pathToOutputNoExt);  
 
 			System.out.println("success");
 			//			Tool.writeFile(specFile.toCppFile(), diffName ? filePath : file.getAbsolutePath(), ".cpp");
@@ -285,13 +291,49 @@ public class Main {
 		prop.setFormula(rvcParser.getFormula());
 
 		cmgXMLIn.setProperty(prop);
-
+		
 		LogicRepositoryData cmgDataIn = new LogicRepositoryData(cmgXMLIn);
 
-		// Find a logic plugin and apply it
-		ByteArrayOutputStream logicPluginResultStream 
-		= LogicPluginFactory.process(logicPluginDirPath, logicName, cmgDataIn);
+		URL jarUrl;
+		ByteArrayOutputStream logicPluginResultStream = null;
+		URLClassLoader loader;
+		try {
+			jarUrl = new URL("jar:file:/home/cans-u/rv-monitor/target/release/rv-monitor/lib/logicrepository-1.0-SNAPSHOT.jar!/");
+			loader = new URLClassLoader(new URL[] { jarUrl });
+			Class<?> classToLoad = loader.loadClass("com.runtimeverification.rvmonitor.logicrepository.plugins.LogicPluginFactory");
+//			Object instance = classToLoad.newInstance();
+//			System.out.println(instance.getClass());
+//			Class<?> classToLoad = Class.forName ("com.runtimeverification.rvmonitor.logicrepository.plugins.LogicPluginFactory", true, loader);
+			Class[] paramTypes = {String.class, String.class, LogicRepositoryData.class};
+			Method method = classToLoad.getMethod ("process", paramTypes);
+			logicPluginResultStream 
+			= (ByteArrayOutputStream) method.invoke(null, logicPluginDirPath, logicName, cmgDataIn);
+			
+			loader.close();
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		} catch (NoSuchMethodException e) {
+			e.printStackTrace();
+		} catch (SecurityException e) {
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 
+		// Find a logic plugin and apply it
+//		ByteArrayOutputStream logicPluginResultStream 
+//		= LogicPluginFactory.process(logicPluginDirPath, logicName, cmgDataIn);
+
+		System.out.println("o zaman bu");
+		
 		// Error check
 		if (logicPluginResultStream == null || logicPluginResultStream.size() == 0) {
 			throw new LogicException("Unknown Error from Logic Plugins");
