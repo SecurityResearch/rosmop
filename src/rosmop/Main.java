@@ -4,18 +4,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.runtimeverification.rvmonitor.c.rvc.CSpecification;
 import com.runtimeverification.rvmonitor.logicpluginshells.LogicPluginShell;
 import com.runtimeverification.rvmonitor.logicpluginshells.LogicPluginShellResult;
 import com.runtimeverification.rvmonitor.logicpluginshells.cfg.CCFG;
@@ -101,9 +96,8 @@ public class Main {
 
 			CSpecification rvcParser = (CSpecification) new RVParserAdapter(readyToProcess);
 			LogicRepositoryData cmgDataOut = sendToLogicRepository(rvcParser, logicPluginDirPath);
-//			outputCode(cmgDataOut, rvcParser, pathToOutputNoExt);  
+			outputCode(cmgDataOut, rvcParser, pathToOutputNoExt);  
 
-			System.out.println("success");
 			//			Tool.writeFile(specFile.toCppFile(), diffName ? filePath : file.getAbsolutePath(), ".cpp");
 			//			Tool.writeFile(specFile.toHeaderFile(), diffName ? filePath : file.getAbsolutePath(), ".h");
 			//			
@@ -294,46 +288,10 @@ public class Main {
 		
 		LogicRepositoryData cmgDataIn = new LogicRepositoryData(cmgXMLIn);
 
-		URL jarUrl;
-		ByteArrayOutputStream logicPluginResultStream = null;
-		URLClassLoader loader;
-		try {
-			jarUrl = new URL("jar:file:/home/cans-u/rv-monitor/target/release/rv-monitor/lib/logicrepository-1.0-SNAPSHOT.jar!/");
-			loader = new URLClassLoader(new URL[] { jarUrl });
-			Class<?> classToLoad = loader.loadClass("com.runtimeverification.rvmonitor.logicrepository.plugins.LogicPluginFactory");
-//			Object instance = classToLoad.newInstance();
-//			System.out.println(instance.getClass());
-//			Class<?> classToLoad = Class.forName ("com.runtimeverification.rvmonitor.logicrepository.plugins.LogicPluginFactory", true, loader);
-			Class[] paramTypes = {String.class, String.class, LogicRepositoryData.class};
-			Method method = classToLoad.getMethod ("process", paramTypes);
-			logicPluginResultStream 
-			= (ByteArrayOutputStream) method.invoke(null, logicPluginDirPath, logicName, cmgDataIn);
-			
-			loader.close();
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		} catch (NoSuchMethodException e) {
-			e.printStackTrace();
-		} catch (SecurityException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
 		// Find a logic plugin and apply it
-//		ByteArrayOutputStream logicPluginResultStream 
-//		= LogicPluginFactory.process(logicPluginDirPath, logicName, cmgDataIn);
+		ByteArrayOutputStream logicPluginResultStream 
+		= LogicPluginFactory.process(logicPluginDirPath, logicName, cmgDataIn);
 
-		System.out.println("o zaman bu");
-		
 		// Error check
 		if (logicPluginResultStream == null || logicPluginResultStream.size() == 0) {
 			throw new LogicException("Unknown Error from Logic Plugins");
@@ -358,17 +316,20 @@ public class Main {
         String constSpecName = (String) sr.properties.get("constSpecName");
         
         String cFile = rvcPrefix + specName + "Monitor.c";
-        String aFile = "aspect.map";
-        String mFile = "Makefile.instrument";
-        String mnFile = "Makefile.new";
         String hFile = rvcPrefix + specName + "Monitor.h";
-        String bcFile = rvcPrefix + specName + "Monitor.bc";
         String hDef = rvcPrefix + constSpecName + "MONITOR_H";
         
         File cFileHandle = new File(cFile);
         FileOutputStream cfos = new FileOutputStream(cFileHandle);
         PrintStream cos = new PrintStream(cfos);
-          
+        
+        FileOutputStream hfos = new FileOutputStream(new File(hFile));
+        PrintStream hos = new PrintStream(hfos);
+        hos.println("#ifndef " + hDef);
+        hos.println("#define " + hDef);
+        hos.println(sr.properties.get("header declarations"));
+        hos.println("#endif");
+        
         cos.println(rvcParser.getIncludes());
         cos.println("#include <stdlib.h>");
         cos.println(sr.properties.get("state declaration"));
@@ -377,6 +338,11 @@ public class Main {
         cos.println(sr.properties.get("reset"));
         cos.println(sr.properties.get("monitoring body"));
         cos.println(sr.properties.get("event functions"));
+        
+        System.out.println(cFile + " and " + hFile + " have been generated");
+        
+        cos.close();
+        hos.close();
     }
     
     /**

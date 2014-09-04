@@ -3,6 +3,8 @@ package rosmop;
 import java.util.Map;
 import java.util.HashMap;
 
+import com.runtimeverification.rvmonitor.c.rvc.CSpecification;
+
 import rosmop.parser.ast.mopspec.*;
 
 /**

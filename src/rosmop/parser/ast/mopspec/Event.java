@@ -50,14 +50,16 @@ public class Event {
 	}
 
 	private void parameterize() {
-		definition = definition.substring(1, definition.length()-1);
 		// get rid of multiline comments!!
 		definition = definition.replaceAll("(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)","");
-		String[] vars = definition.trim().split(",");
-		if(!definition.isEmpty()){
+
+		String tmp = definition.substring(1, definition.length()-1);
+		String[] vars = tmp.trim().split(",");
+		if(!tmp.isEmpty()){
 			parameters = new ArrayList<Variable>();
 			patternMap = new HashMap<String, String>();
 			for (String string : vars) {
+//				System.out.println(string.trim());
 				if(string.trim().startsWith("//")) continue;
 				parameters.add(new Variable(string.trim()));
 			}
