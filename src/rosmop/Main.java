@@ -32,6 +32,8 @@ import rosmop.util.Tool;
 
 public class Main {
 
+	static String logicPluginDirPath, pathToOutputNoExt;
+
 	public static void main(String[] args) {
 		try {
 
@@ -40,9 +42,9 @@ public class Main {
 						+ "one .rv file or a folder of .rv files.");
 			}
 
-			String logicPluginDirPath = readLogicPluginDir();
+			logicPluginDirPath = readLogicPluginDir();
 
-			String pathToFile = "", pathToOutputNoExt;
+			String pathToFile = "";
 			File fileToGetPath;
 			MonitorFile readyToProcess;
 			/*
@@ -58,7 +60,7 @@ public class Main {
 					//					System.out.println(pathToFile);
 					pathToOutputNoExt = pathToFile + File.separator + "rvmonitor";
 					//					System.out.println(pathToOutputNoExt);
-					readyToProcess = processDirOfFiles(pathToFile);
+					processDirOfFiles(pathToFile);
 				} else if(args[0].endsWith(File.separator)){
 					fileToGetPath = new File(args[0]);
 					pathToFile = fileToGetPath.getAbsolutePath();
@@ -66,7 +68,7 @@ public class Main {
 					//					System.out.println(pathToFile);
 					pathToOutputNoExt = pathToFile + File.separator + "rvmonitor";
 					//					System.out.println(pathToOutputNoExt);
-					readyToProcess = processDirOfFiles(pathToFile);
+					processDirOfFiles(pathToFile);
 				} else {
 					if (!checkArguments(args)) {
 						throw new ROSMOPException("Unrecognized file type! The ROSMOP specification file should have .rv as the extension.");
@@ -78,6 +80,7 @@ public class Main {
 					pathToOutputNoExt = pathToFile.substring(0, pathToFile.lastIndexOf(File.separator)+1) + "rvmonitor";
 					//					System.out.println(pathToOutputNoExt);
 					readyToProcess = ROSMOPParser.parse(pathToFile);
+					process(readyToProcess);
 				}
 			}
 			/*
@@ -91,12 +94,12 @@ public class Main {
 				//				System.out.println(pathToFile);
 				pathToOutputNoExt = pathToFile.substring(0, pathToFile.lastIndexOf(File.separator)+1) + "rvmonitor";
 				//				System.out.println(pathToOutputNoExt);
-				readyToProcess = processMultipleFiles(args);
+				processMultipleFiles(args);
 			}
 
-			CSpecification rvcParser = (CSpecification) new RVParserAdapter(readyToProcess);
-			LogicRepositoryData cmgDataOut = sendToLogicRepository(rvcParser, logicPluginDirPath);
-			outputCode(cmgDataOut, rvcParser, pathToOutputNoExt);  
+			//			CSpecification rvcParser = (CSpecification) new RVParserAdapter(readyToProcess);
+			//			LogicRepositoryData cmgDataOut = sendToLogicRepository(rvcParser, logicPluginDirPath);
+			//			outputCode(cmgDataOut, rvcParser, pathToOutputNoExt);  
 
 			//			Tool.writeFile(specFile.toCppFile(), diffName ? filePath : file.getAbsolutePath(), ".cpp");
 			//			Tool.writeFile(specFile.toHeaderFile(), diffName ? filePath : file.getAbsolutePath(), ".h");
@@ -107,24 +110,51 @@ public class Main {
 		}
 	}
 
-	private static MonitorFile processMultipleFiles(String[] args) throws ROSMOPException {
-		MonitorFile specFile = new MonitorFile();
+	private static void process(MonitorFile readyToProcess){
+		CSpecification rvcParser = (CSpecification) new RVParserAdapter(readyToProcess);
+		LogicRepositoryData cmgDataOut = null;
+		try {
+			//raw monitor
+			if(rvcParser.getFormalism() != null)
+				cmgDataOut = sendToLogicRepository(rvcParser, logicPluginDirPath);
+			outputCode(cmgDataOut, rvcParser, pathToOutputNoExt); 
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	private static void processMultipleFiles(String[] args) {
+		Set<String> events = new HashSet<String>();
+		Set<String> declarations = new HashSet<String>();
+
 		try {
 			if (!checkArguments(args)) {
 				throw new ROSMOPException("Unrecognized file type! The ROSMOP specification file should have .rv as the extension.");
 			}
 			for (String arg : args) {
 				MonitorFile f = ROSMOPParser.parse(arg);
-				specFile.addSpecifications(f.getSpecifications());
-				specFile.addPreamble(f.getPreamble());
+
+				/* In case of multiple .rv files as input, all of the specifications 
+				 * are gathered and checked for duplicate event names and field declarations;
+				 * they should have unique names.*/
+				for (Specification spec : f.getSpecifications()) {
+					for (Event event : spec.getEvents()) {
+						if (!events.add(event.getName())) 
+							throw new ROSMOPException("Duplicate event names");
+					}
+
+					for (Variable var : spec.getSpecDeclarations()) {
+						if(!declarations.add(var.getDeclaredName())) 
+							throw new ROSMOPException("Duplicate field declarations");
+					}
+				}
+
+				process(f);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		if (!checkDuplicatedEventsDeclarations(specFile)) {
-			throw new ROSMOPException("Duplicate event names or field declarations"); 
-		}
-		return specFile;
 	}
 
 	/**
@@ -135,9 +165,7 @@ public class Main {
 	 * 			from all .rv files in the input directory
 	 * @throws ROSMOPException
 	 */
-	private static MonitorFile processDirOfFiles(String arg) throws ROSMOPException {
-		MonitorFile specFile = new MonitorFile();
-
+	private static void processDirOfFiles(String arg) throws ROSMOPException {
 		try {
 			File folder = new File(arg);
 			File[] listOfFiles = folder.listFiles();
@@ -153,26 +181,16 @@ public class Main {
 
 			File noDirs[] = new File[onlyFiles.size()];
 			noDirs = onlyFiles.toArray(noDirs);
-
-			//all remaining files should have the extension .rv
-			if (!checkArguments(noDirs)) {
-				throw new ROSMOPException("Unrecognized file type! The ROSMOP specification file should have .rv as the extension.");
+			String fileNames[] = new String[noDirs.length];
+			for (int i = 0; i < fileNames.length; i++) {
+				fileNames[i] = noDirs[i].getAbsolutePath();
 			}
 
-			for (File file : noDirs) {
-				MonitorFile f = ROSMOPParser.parse(file.getAbsolutePath());
-				specFile.addSpecifications(f.getSpecifications());
-				specFile.addPreamble(f.getPreamble());
-			}
+			processMultipleFiles(fileNames);
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
-		if (!checkDuplicatedEventsDeclarations(specFile)) {
-			throw new ROSMOPException("Duplicate event names or field declarations"); 
-		}
-
-		return specFile;
 	}
 
 	private static boolean checkArguments(String[] args) {
@@ -182,43 +200,6 @@ public class Main {
 				return false;
 			}
 		}
-		return true;
-	}
-
-	private static boolean checkArguments(File[] args) {
-		if(args.length == 0) return false;
-		for (File arg : args) {
-			if(!Tool.isSpecFile(arg.getName())){
-				return false;
-			}
-		}
-		return true;
-	}
-
-
-	/**
-	 * In case of multiple .rv files as input, all of them are gathered
-	 * and processed as one big specification file with multiple specifications.
-	 * Therefore, event names and field declarations should have unique names.
-	 * 
-	 * @param specFile The specification file which is the collection of 
-	 * 			all .rv specifications provided 
-	 * @return true if there are no duplicate names
-	 */
-	private static boolean checkDuplicatedEventsDeclarations(MonitorFile specFile) {
-		Set<String> events = new HashSet<String>();
-		Set<String> declarations = new HashSet<String>();
-
-		for (Specification spec : specFile.getSpecifications()) {
-			for (Event event : spec.getEvents()) {
-				if (!events.add(event.getName())) return false;
-			}
-
-			for (Variable var : spec.getSpecDeclarations()) {
-				if(!declarations.add(var.getDeclaredName())) return false;
-			}
-		}
-
 		return true;
 	}
 
@@ -285,7 +266,7 @@ public class Main {
 		prop.setFormula(rvcParser.getFormula());
 
 		cmgXMLIn.setProperty(prop);
-		
+
 		LogicRepositoryData cmgDataIn = new LogicRepositoryData(cmgXMLIn);
 
 		// Find a logic plugin and apply it
@@ -298,81 +279,134 @@ public class Main {
 		}
 		return new LogicRepositoryData(logicPluginResultStream);
 	}
-	
+
 	/**
-     * Output code for the monitor. Creates a C and a H file, optionally compiles to LLVM.
-     * @param cmgDataOut The output of the logic repository plugins.
-     * @param rvcParser Extracted information from the RVM C file.
+	 * Output code for the monitor. Creates a C and a H file, optionally compiles to LLVM.
+	 * @param cmgDataOut The output of the logic repository plugins.
+	 * @param rvcParser Extracted information from the RVM C file.
 	 * @throws RVMException 
-     */
-    static private void outputCode(LogicRepositoryData cmgDataOut, CSpecification rvcParser, 
-            String outputPath) throws LogicException, FileNotFoundException, RVMException {
-        LogicRepositoryType logicOutputXML = cmgDataOut.getXML();
-        
-        LogicPluginShellResult sr = evaluateLogicPluginShell(logicOutputXML, rvcParser, false);
-        
-        String rvcPrefix = (String) sr.properties.get("rvcPrefix");
-        String specName = (String) sr.properties.get("specName");
-        String constSpecName = (String) sr.properties.get("constSpecName");
-        
-        String cFile = rvcPrefix + specName + "Monitor.c";
-        String hFile = rvcPrefix + specName + "Monitor.h";
-        String hDef = rvcPrefix + constSpecName + "MONITOR_H";
-        
-        File cFileHandle = new File(cFile);
-        FileOutputStream cfos = new FileOutputStream(cFileHandle);
-        PrintStream cos = new PrintStream(cfos);
-        
-        FileOutputStream hfos = new FileOutputStream(new File(hFile));
-        PrintStream hos = new PrintStream(hfos);
-        hos.println("#ifndef " + hDef);
-        hos.println("#define " + hDef);
-        hos.println(sr.properties.get("header declarations"));
-        hos.println("#endif");
-        
-        cos.println(rvcParser.getIncludes());
-        cos.println("#include <stdlib.h>");
-        cos.println(sr.properties.get("state declaration"));
-        cos.println(rvcParser.getDeclarations());
-        cos.println(sr.properties.get("categories"));
-        cos.println(sr.properties.get("reset"));
-        cos.println(sr.properties.get("monitoring body"));
-        cos.println(sr.properties.get("event functions"));
-        
-        System.out.println(cFile + " and " + hFile + " have been generated");
-        
-        cos.close();
-        hos.close();
-    }
-    
-    /**
-     * Evaluate the appropriate logic plugin shell on the logic formalism.
-     * @param logicOutputXML The result of the logic repository plugins.
-     * @param rvcParser The extracted information from the C file.
-     * @return The result of applying the appropriate logic plugin shell to the parameters.
-     * @throws LogicException Something went wrong in applying the logic plugin shell.
-     * @throws RVMException 
-     */
-    private static LogicPluginShellResult evaluateLogicPluginShell(
-            LogicRepositoryType logicOutputXML, CSpecification rvcParser, boolean parametric)
-            throws LogicException, RVMException {
-        //TODO: make this reflective instead of using a switch over type
-        String logic = logicOutputXML.getProperty().getLogic().toLowerCase();
-        LogicPluginShell shell;
-        
-        if("fsm".equals(logic)) {
-            shell = new CFSM((com.runtimeverification.rvmonitor.c.rvc.CSpecification) rvcParser, parametric);
-        }
-        else if("tfsm".equals(logic)) {
-            shell = new CTFSM((com.runtimeverification.rvmonitor.c.rvc.CSpecification) rvcParser, parametric);
-        }
-        else if("cfg".equals(logic)) {
-            shell = new CCFG((com.runtimeverification.rvmonitor.c.rvc.CSpecification) rvcParser, parametric);
-        }
-        else {
-            throw new LogicException("Only finite logics and CFG are currently supported");
-        }
-        
-        return shell.process(logicOutputXML, logicOutputXML.getEvents());
-    }
+	 */
+	static private void outputCode(LogicRepositoryData cmgDataOut, CSpecification rvcParser, 
+			String outputPath) throws LogicException, FileNotFoundException, RVMException {
+		if(cmgDataOut != null){
+			LogicRepositoryType logicOutputXML = cmgDataOut.getXML();
+
+			LogicPluginShellResult sr = evaluateLogicPluginShell(logicOutputXML, rvcParser, false);
+
+			String rvcPrefix = (String) sr.properties.get("rvcPrefix");
+			String specName = (String) sr.properties.get("specName");
+			String constSpecName = (String) sr.properties.get("constSpecName");
+
+			String cFile = rvcPrefix + specName + "Monitor.c";
+			String hFile = rvcPrefix + specName + "Monitor.h";
+			String hDef = rvcPrefix + constSpecName + "MONITOR_H";
+
+			File cFileHandle = new File(cFile);
+			FileOutputStream cfos = new FileOutputStream(cFileHandle);
+			PrintStream cos = new PrintStream(cfos);
+
+			FileOutputStream hfos = new FileOutputStream(new File(hFile));
+			PrintStream hos = new PrintStream(hfos);
+			hos.println("#ifndef " + hDef);
+			hos.println("#define " + hDef + "\n");
+			if(!((RVParserAdapter) rvcParser).getInit().isEmpty())
+				hos.println("void init();");
+			hos.println(sr.properties.get("header declarations"));
+			hos.println("#endif");
+
+			cos.println(rvcParser.getIncludes());
+			cos.println("#include <stdlib.h>");
+			cos.println(sr.properties.get("state declaration"));
+			cos.println(rvcParser.getDeclarations());
+			cos.println(sr.properties.get("categories"));
+			cos.println(sr.properties.get("reset"));
+			cos.println(sr.properties.get("monitoring body"));
+			if(!((RVParserAdapter) rvcParser).getInit().isEmpty())
+				cos.println("void init()\n" + ((RVParserAdapter) rvcParser).getInit());
+			cos.println(sr.properties.get("event functions"));
+
+			System.out.println(cFile + " and " + hFile + " have been generated");
+
+			cos.close();
+			hos.close();
+		} else{
+			String rvcPrefix = "__RAW_";
+			String specName = rvcParser.getSpecName() + "_";
+			String constSpecName = specName.toUpperCase();
+
+			String cFile = rvcPrefix + specName + "Monitor.c";
+			String hFile = rvcPrefix + specName + "Monitor.h";
+			String hDef = rvcPrefix + constSpecName + "MONITOR_H";
+
+			StringBuilder headerDecs = new StringBuilder();
+			StringBuilder eventFuncs = new StringBuilder();
+
+			for(String eventName : rvcParser.getEvents().keySet()){
+				headerDecs.append("void\n");
+				eventFuncs.append("void\n");
+				String funcDecl = rvcPrefix + specName + eventName + rvcParser.getParameters().get(eventName);
+				headerDecs.append(funcDecl + ";\n");
+				eventFuncs.append(funcDecl + "\n");
+				eventFuncs.append("{\n");
+				eventFuncs.append(rvcParser.getEvents().get(eventName) + "\n"); 
+				eventFuncs.append("}\n\n");
+			}
+
+			File cFileHandle = new File(cFile);
+			FileOutputStream cfos = new FileOutputStream(cFileHandle);
+			PrintStream cos = new PrintStream(cfos);
+
+			FileOutputStream hfos = new FileOutputStream(new File(hFile));
+			PrintStream hos = new PrintStream(hfos);
+			hos.println("#ifndef " + hDef);
+			hos.println("#define " + hDef + "\n");
+			if(!((RVParserAdapter) rvcParser).getInit().isEmpty())
+				hos.println("void init();");
+			hos.println(headerDecs.toString());
+			hos.println("#endif");
+
+			cos.println(rvcParser.getIncludes());
+			cos.println("#include <stdlib.h>");
+			cos.println(rvcParser.getDeclarations());
+			if(!((RVParserAdapter) rvcParser).getInit().isEmpty())
+				cos.println("void init()\n" + ((RVParserAdapter) rvcParser).getInit());
+			cos.println(eventFuncs.toString());
+
+			System.out.println(cFile + " and " + hFile + " have been generated");
+
+			cos.close();
+			hos.close();
+		}
+	}
+
+	/**
+	 * Evaluate the appropriate logic plugin shell on the logic formalism.
+	 * @param logicOutputXML The result of the logic repository plugins.
+	 * @param rvcParser The extracted information from the C file.
+	 * @return The result of applying the appropriate logic plugin shell to the parameters.
+	 * @throws LogicException Something went wrong in applying the logic plugin shell.
+	 * @throws RVMException 
+	 */
+	private static LogicPluginShellResult evaluateLogicPluginShell(
+			LogicRepositoryType logicOutputXML, CSpecification rvcParser, boolean parametric)
+					throws LogicException, RVMException {
+		//TODO: make this reflective instead of using a switch over type
+		String logic = logicOutputXML.getProperty().getLogic().toLowerCase();
+		LogicPluginShell shell;
+
+		if("fsm".equals(logic)) {
+			shell = new CFSM((com.runtimeverification.rvmonitor.c.rvc.CSpecification) rvcParser, parametric);
+		}
+		else if("tfsm".equals(logic)) {
+			shell = new CTFSM((com.runtimeverification.rvmonitor.c.rvc.CSpecification) rvcParser, parametric);
+		}
+		else if("cfg".equals(logic)) {
+			shell = new CCFG((com.runtimeverification.rvmonitor.c.rvc.CSpecification) rvcParser, parametric);
+		}
+		else {
+			throw new LogicException("Only finite logics and CFG are currently supported");
+		}
+
+		return shell.process(logicOutputXML, logicOutputXML.getEvents());
+	}
 }
