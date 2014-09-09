@@ -1,5 +1,6 @@
 package rosmop;
 
+import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -42,6 +43,10 @@ public class RVParserAdapter implements CSpecification {
 			events.put(event.getName(), event.getAction());
 		}
 		return events;
+	}
+	
+	public List<Event> getEventsList() {
+		return wrapped.getEvents();
 	}
 
 	@Override
