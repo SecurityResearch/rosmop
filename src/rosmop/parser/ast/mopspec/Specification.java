@@ -19,7 +19,7 @@ public class Specification {
     private final List<Event> events;
     private final List<Property> properties;
     
-    private List<Variable> specDeclarations;
+    private List<Variable> specDeclarations = new ArrayList<Variable>();;
     
     /**
      * Construct the specification out of its children elements.
@@ -52,16 +52,12 @@ public class Specification {
     	languageDeclarations = languageDeclarations.replaceAll("(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)","");
 		String[] vars = languageDeclarations.trim().split(";");
 		if(!languageDeclarations.isEmpty()){
-			specDeclarations = new ArrayList<Variable>();
 			for (String string : vars) {
 				if(string.trim().startsWith("//")) continue;
 				specDeclarations.add(new Variable(string.trim()));
 			}
 		}
 	}
-    
-//    TODO: getallmsgtypes to include them in the header file as dependencies
-//    		necessary??
 
 	/**
      * An unmodifiable list of words used to affect the code generator.

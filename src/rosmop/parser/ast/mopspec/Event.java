@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import rosmop.parser.ast.visitor.GeneratorCommongUtil;
+
 /**
  * An event monitored in the output program.
  */
@@ -41,12 +43,13 @@ public class Event {
 		this.definitionModifiers = Collections.unmodifiableList(
 				new ArrayList<String>(definitionModifiers));
 		this.definition = definition;
-		parameterize();
 		this.topic = topic;
 		this.msgType = msgType;
 		this.pattern = pattern;
-		matchParametersToPattern();
 		this.action = action;
+		
+		parameterize();
+		matchParametersToPattern();
 	}
 
 	private void parameterize() {
@@ -64,6 +67,9 @@ public class Event {
 				parameters.add(new Variable(string.trim()));
 			}
 		}
+		
+		String eventMsgType = msgType.replace("/", "::");
+		definition = "(const " + eventMsgType + "::ConstPtr& " + GeneratorCommongUtil.MONITORED_MSG_NAME + ")";
 	}
 
 	private void matchParametersToPattern() {

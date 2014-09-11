@@ -23,9 +23,19 @@ public class MonitorFile {
     public MonitorFile(String preamble, List<Specification> specifications) {
     	this.preamble = preamble;
         this.specifications = specifications;
+        
+        addMsgTypeIncludes();
     }
     
-    /**
+    private void addMsgTypeIncludes() {
+    	for (Specification specification : specifications) {
+			for (Event event : specification.getEvents()) {
+				addPreamble("#include \"" + event.getMsgType() + ".h\"");
+			}
+		}
+	}
+
+	/**
      * Language-specific declarations that go at the top of the file, e.g. includes, imports.
      * @return Language-specific top of the file declarations.
      */

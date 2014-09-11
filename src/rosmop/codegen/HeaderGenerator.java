@@ -1,39 +1,34 @@
 package rosmop.codegen;
 
 import java.io.FileNotFoundException;
-import java.util.List;
+import java.util.HashMap;
 
 import rosmop.ROSMOPException;
 import rosmop.RVParserAdapter;
 import rosmop.parser.ast.mopspec.Event;
-import rosmop.parser.ast.mopspec.ROSEventDefinition;
-import rosmop.parser.ast.visitor.CppGenerationVisitor;
-import rosmop.parser.ast.visitor.GeneratorCommongUtil;
 import rosmop.util.Tool;
 
 import com.runtimeverification.rvmonitor.c.rvc.CSpecification;
 import com.runtimeverification.rvmonitor.logicpluginshells.LogicPluginShellResult;
 
 public class HeaderGenerator {
-	
+
 	protected final static SourcePrinter printer = new SourcePrinter();
-	
-	public static void generateHeader(CSpecification rvcParser, LogicPluginShellResult sr, String outputPath) throws FileNotFoundException, ROSMOPException{
-		String rvcPrefix = "__RVCPP_";
-		String specName = (String) sr.properties.get("specName");
-		String constSpecName = (String) sr.properties.get("constSpecName");
+	static boolean hasInit = false;
 
-		String hFile = rvcPrefix + specName + "Monitor.h";
-		String hDef = rvcPrefix + constSpecName + "MONITOR_H";
+	public static void generateHeader(HashMap<CSpecification, LogicPluginShellResult> toWrite, String outputPath) throws FileNotFoundException, ROSMOPException{
 
-//		FileOutputStream hfos = new FileOutputStream(new File(hFile));
-//		PrintStream hos = new PrintStream(hfos);
-		
-		
+		String hFile = "rvmonitor.h";
+		String hDef = "RVCPP_RVMONITOR_H";
+
 		printer.printLn("#ifndef " + hDef);
 		printer.printLn("#define " + hDef + "\n");
-		printer.printLn(rvcParser.getIncludes());
-		
+
+		printRosIncludes();
+		for (CSpecification rvcParser : toWrite.keySet()) {
+			printer.printLn(rvcParser.getIncludes());
+		}
+
 		printer.printLn();
 		printer.printLn("namespace rv");
 		printer.printLn("{");
@@ -55,13 +50,22 @@ public class HeaderGenerator {
 		//Deconstructor
 		printer.printLn("~" + GeneratorUtil.MONITOR_CLASS_NAME + "();");
 		printer.printLn();
-		
-		generateCallbacks(((RVParserAdapter) rvcParser).getEventsList());
-		
-		if(!((RVParserAdapter) rvcParser).getInit().isEmpty())
-			printer.printLn("void init();");
-		printer.printLn((String) sr.properties.get("header declarations"));
-		
+
+		for (CSpecification rvcParser : toWrite.keySet()) {
+			if(!hasInit && !((RVParserAdapter) rvcParser).getInit().isEmpty()){
+				printer.printLn("void init();");
+				hasInit = true;
+			}
+			
+			if(toWrite.get(rvcParser) != null){
+				printer.printLn((String) toWrite.get(rvcParser).properties.get("header declarations"));
+			}else{
+				for(Event event : ((RVParserAdapter) rvcParser).getEventsList()){
+					printer.printLn("void monitorCallback_" + event.getName() + event.getDefinition() + ";");
+				}
+			}
+		}
+
 		printer.printLn();
 
 		printer.unindent();
@@ -85,40 +89,24 @@ public class HeaderGenerator {
 		printer.unindent();
 
 		printer.printLn();
-		
+
 		printer.printLn("#endif");
-		
+
 		Tool.writeFile(printer.getSource(), outputPath+hFile);
 	}
-	
-	private static void generateCallbacks(List<Event> events) {
 
-		for (Event event : events) {
-			printer.print("void monitorCallback_" + event.getName());
-			String eventMsgType = event.getMsgType().replace("/", "::");
-			printer.print("(const " + eventMsgType + "::ConstPtr& " + GeneratorCommongUtil.MONITORED_MSG_NAME + ");");
-			printer.printLn();
-		}
+	private static void printRosIncludes() {
+		printer.printLn("#include \"rv/xmlrpc_manager.h\"");
+		printer.printLn("#include \"rv/connection_manager.h\"");
+		printer.printLn("#include \"rv/server_manager.h\"");
+		printer.printLn("#include \"rv/subscription.h\"");
+		printer.printLn("#include \"ros/publication.h\"");
+		printer.printLn("#include \"std_msgs/String.h\"");
+		printer.printLn("#include \"ros/subscribe_options.h\"");
+		printer.printLn("#include \"ros/advertise_options.h\"");
+		printer.printLn("#include \"ros/callback_queue.h\"");
+		printer.printLn("#include <rosgraph_msgs/Log.h>");
+		printer.printLn("#include <boost/scoped_ptr.hpp>");
+		printer.printLn("#include <ros/serialization.h>");		
 	}
-	
-	
-//	namespace rv
-//	{
-//	    class RVMonitor
-//	    {
-//	        public:
-//	            RVMonitor(std::string topic, ros::SubscribeOptions &ops_sub);
-//	            ~RVMonitor();
-//
-//	            void monitorCallback_checkPoint(const sensor_msgs::JointState::ConstPtr& monitored_msg);
-//	            void monitorCallback_safeTrigger(const landshark_msgs::PaintballTrigger::ConstPtr& monitored_msg);
-//	            void init();
-//
-//	        private:
-//	            std::string topic_name;
-//	            boost::shared_ptr<rv::ServerManager> server_manager;
-//
-//	    };
-//	}
-
 }

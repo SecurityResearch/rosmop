@@ -7,7 +7,9 @@ import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.runtimeverification.rvmonitor.c.rvc.CSpecification;
@@ -23,6 +25,7 @@ import com.runtimeverification.rvmonitor.logicrepository.parser.logicrepositorys
 import com.runtimeverification.rvmonitor.logicrepository.plugins.LogicPluginFactory;
 import com.runtimeverification.rvmonitor.util.RVMException;
 
+import rosmop.codegen.CppGenerator;
 import rosmop.codegen.HeaderGenerator;
 import rosmop.parser.ast.mopspec.Event;
 import rosmop.parser.ast.mopspec.MonitorFile;
@@ -59,7 +62,7 @@ public class Main {
 					pathToFile = fileToGetPath.getAbsolutePath();
 					//					/home/cans-u/workspace/rosmop
 					//					System.out.println(pathToFile);
-//					TODO: deleted + "rvmonitor"
+					//					TODO: deleted + "rvmonitor"
 					pathToOutputNoExt = pathToFile + File.separator;
 					//					System.out.println(pathToOutputNoExt);
 					processDirOfFiles(pathToFile);
@@ -68,7 +71,7 @@ public class Main {
 					pathToFile = fileToGetPath.getAbsolutePath();
 					//					/home/cans-u/Desktop
 					//					System.out.println(pathToFile);
-//					TODO: deleted + "rvmonitor"
+					//					TODO: deleted + "rvmonitor"
 					pathToOutputNoExt = pathToFile + File.separator;
 					//					System.out.println(pathToOutputNoExt);
 					processDirOfFiles(pathToFile);
@@ -80,11 +83,13 @@ public class Main {
 					pathToFile = fileToGetPath.getAbsolutePath();
 					//					/home/cans-u/Desktop/deneme.rv
 					//					System.out.println(pathToFile);
-//					TODO: deleted + "rvmonitor"
+					//					TODO: deleted + "rvmonitor"
 					pathToOutputNoExt = pathToFile.substring(0, pathToFile.lastIndexOf(File.separator)+1);
 					//					System.out.println(pathToOutputNoExt);
 					readyToProcess = ROSMOPParser.parse(pathToFile);
-					process(readyToProcess);
+					List<MonitorFile> readyMonitor = new ArrayList<MonitorFile>();
+					readyMonitor.add(readyToProcess);
+					process(readyMonitor);
 				}
 			}
 			/*
@@ -96,7 +101,7 @@ public class Main {
 				pathToFile = fileToGetPath.getAbsolutePath();
 				//					/home/cans-u/Desktop/deneme.rv
 				//				System.out.println(pathToFile);
-//				TODO: deleted + "rvmonitor"
+				//				TODO: deleted + "rvmonitor"
 				pathToOutputNoExt = pathToFile.substring(0, pathToFile.lastIndexOf(File.separator)+1);
 				//				System.out.println(pathToOutputNoExt);
 				processMultipleFiles(args);
@@ -115,14 +120,21 @@ public class Main {
 		}
 	}
 
-	private static void process(MonitorFile readyToProcess){
-		CSpecification rvcParser = (CSpecification) new RVParserAdapter(readyToProcess);
-		LogicRepositoryData cmgDataOut = null;
+	private static void process(List<MonitorFile> readyMonitors){
+		HashMap<CSpecification, LogicRepositoryData> rvcParser = new HashMap<CSpecification, LogicRepositoryData>();
+
 		try {
-			//raw monitor
-			if(rvcParser.getFormalism() != null)
-				cmgDataOut = sendToLogicRepository(rvcParser, logicPluginDirPath);
-			outputCode(cmgDataOut, rvcParser, pathToOutputNoExt); 
+			for (MonitorFile mf : readyMonitors) {
+				CSpecification cspec = (CSpecification) new RVParserAdapter(mf);
+				//raw monitor
+				if(cspec.getFormalism() != null){
+					LogicRepositoryData cmgDataOut = sendToLogicRepository(cspec, logicPluginDirPath);
+					rvcParser.put(cspec, cmgDataOut);
+				} else
+					rvcParser.put(cspec, null);
+			}
+
+			outputCode(rvcParser, pathToOutputNoExt); 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -132,7 +144,7 @@ public class Main {
 	private static void processMultipleFiles(String[] args) {
 		Set<String> events = new HashSet<String>();
 		Set<String> declarations = new HashSet<String>();
-
+		List<MonitorFile> readyMonitors = new ArrayList<MonitorFile>();
 		try {
 			if (!checkArguments(args)) {
 				throw new ROSMOPException("Unrecognized file type! The ROSMOP specification file should have .rv as the extension.");
@@ -155,8 +167,10 @@ public class Main {
 					}
 				}
 
-				process(f);
+				readyMonitors.add(f);
 			}
+
+			process(readyMonitors);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -291,103 +305,25 @@ public class Main {
 	 * @param rvcParser Extracted information from the RVM C file.
 	 * @throws RVMException 
 	 */
-	static private void outputCode(LogicRepositoryData cmgDataOut, CSpecification rvcParser, 
+	static private void outputCode(HashMap<CSpecification, LogicRepositoryData> rvcParser, 
 			String outputPath) throws LogicException, FileNotFoundException, RVMException {
-		if(cmgDataOut != null){
-			LogicRepositoryType logicOutputXML = cmgDataOut.getXML();
-
-			LogicPluginShellResult sr = evaluateLogicPluginShell(logicOutputXML, rvcParser, false);
-
-			String rvcPrefix = "__RVCPP_";
-			String specName = (String) sr.properties.get("specName");
-			String constSpecName = (String) sr.properties.get("constSpecName");
-
-			String cFile = rvcPrefix + specName + "Monitor.cpp";
-			String hFile = rvcPrefix + specName + "Monitor.h";
-			String hDef = rvcPrefix + constSpecName + "MONITOR_H";
-
-			File cFileHandle = new File(cFile);
-			FileOutputStream cfos = new FileOutputStream(cFileHandle);
-			PrintStream cos = new PrintStream(cfos);
-//
-//			FileOutputStream hfos = new FileOutputStream(new File(hFile));
-//			PrintStream hos = new PrintStream(hfos);
-//			hos.println("#ifndef " + hDef);
-//			hos.println("#define " + hDef + "\n");
-//			if(!((RVParserAdapter) rvcParser).getInit().isEmpty())
-//				hos.println("void init();");
-//			hos.println(sr.properties.get("header declarations"));
-//			hos.println("#endif");
-			
-			try {
-				HeaderGenerator.generateHeader(rvcParser, sr, outputPath);
-			} catch (ROSMOPException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+		HashMap<CSpecification, LogicPluginShellResult> toWrite = new HashMap<CSpecification, LogicPluginShellResult>();
+		
+		for (CSpecification cspec : rvcParser.keySet()) {
+			if(rvcParser.get(cspec) != null){
+				LogicRepositoryType logicOutputXML = rvcParser.get(cspec).getXML();
+				LogicPluginShellResult sr = evaluateLogicPluginShell(logicOutputXML, cspec, false);
+				toWrite.put(cspec, sr);
+			} else {
+				toWrite.put(cspec, null);
 			}
+		}
 
-			cos.println(rvcParser.getIncludes());
-			cos.println("#include <stdlib.h>");
-			cos.println(sr.properties.get("state declaration"));
-			cos.println(rvcParser.getDeclarations());
-			cos.println(sr.properties.get("categories"));
-			cos.println(sr.properties.get("reset"));
-			cos.println(sr.properties.get("monitoring body"));
-			if(!((RVParserAdapter) rvcParser).getInit().isEmpty())
-				cos.println("void init()\n" + ((RVParserAdapter) rvcParser).getInit());
-			cos.println(sr.properties.get("event functions"));
-
-			System.out.println(cFile + " and " + hFile + " have been generated");
-
-			cos.close();
-//			hos.close();
-		} else{
-			String rvcPrefix = "__RAW_";
-			String specName = rvcParser.getSpecName() + "_";
-			String constSpecName = specName.toUpperCase();
-
-			String cFile = rvcPrefix + specName + "Monitor.cpp";
-			String hFile = rvcPrefix + specName + "Monitor.h";
-			String hDef = rvcPrefix + constSpecName + "MONITOR_H";
-
-			StringBuilder headerDecs = new StringBuilder();
-			StringBuilder eventFuncs = new StringBuilder();
-
-			for(String eventName : rvcParser.getEvents().keySet()){
-				headerDecs.append("void\n");
-				eventFuncs.append("void\n");
-				String funcDecl = rvcPrefix + specName + eventName + rvcParser.getParameters().get(eventName);
-				headerDecs.append(funcDecl + ";\n");
-				eventFuncs.append(funcDecl + "\n");
-				eventFuncs.append("{\n");
-				eventFuncs.append(rvcParser.getEvents().get(eventName) + "\n"); 
-				eventFuncs.append("}\n\n");
-			}
-
-			File cFileHandle = new File(cFile);
-			FileOutputStream cfos = new FileOutputStream(cFileHandle);
-			PrintStream cos = new PrintStream(cfos);
-
-			FileOutputStream hfos = new FileOutputStream(new File(hFile));
-			PrintStream hos = new PrintStream(hfos);
-			hos.println("#ifndef " + hDef);
-			hos.println("#define " + hDef + "\n");
-			if(!((RVParserAdapter) rvcParser).getInit().isEmpty())
-				hos.println("void init();");
-			hos.println(headerDecs.toString());
-			hos.println("#endif");
-
-			cos.println(rvcParser.getIncludes());
-			cos.println("#include <stdlib.h>");
-			cos.println(rvcParser.getDeclarations());
-			if(!((RVParserAdapter) rvcParser).getInit().isEmpty())
-				cos.println("void init()\n" + ((RVParserAdapter) rvcParser).getInit());
-			cos.println(eventFuncs.toString());
-
-			System.out.println(cFile + " and " + hFile + " have been generated");
-
-			cos.close();
-			hos.close();
+		try {
+			HeaderGenerator.generateHeader(toWrite, outputPath);
+			CppGenerator.generateCpp(toWrite, outputPath);
+		} catch (ROSMOPException e) {
+			e.printStackTrace();
 		}
 	}
 
