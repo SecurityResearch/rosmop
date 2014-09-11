@@ -1,6 +1,7 @@
 package rosmop.codegen;
 
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import rosmop.ROSMOPException;
@@ -15,6 +16,7 @@ public class HeaderGenerator {
 
 	protected final static SourcePrinter printer = new SourcePrinter();
 	static boolean hasInit = false;
+	static HashMap<String, ArrayList<Event>> addedTopics = new HashMap<String, ArrayList<Event>>();
 
 	public static void generateHeader(HashMap<CSpecification, LogicPluginShellResult> toWrite, String outputPath) throws FileNotFoundException, ROSMOPException{
 
@@ -51,20 +53,9 @@ public class HeaderGenerator {
 		printer.printLn("~" + GeneratorUtil.MONITOR_CLASS_NAME + "();");
 		printer.printLn();
 
-		for (CSpecification rvcParser : toWrite.keySet()) {
-			if(!hasInit && !((RVParserAdapter) rvcParser).getInit().isEmpty()){
-				printer.printLn("void init();");
-				hasInit = true;
-			}
-			
-			if(toWrite.get(rvcParser) != null){
-				printer.printLn((String) toWrite.get(rvcParser).properties.get("header declarations"));
-			}else{
-				for(Event event : ((RVParserAdapter) rvcParser).getEventsList()){
-					printer.printLn("void monitorCallback_" + event.getName() + event.getDefinition() + ";");
-				}
-			}
-		}
+		populateAddedTopics(toWrite);
+
+		generateCallbacks(toWrite);
 
 		printer.printLn();
 
@@ -93,6 +84,49 @@ public class HeaderGenerator {
 		printer.printLn("#endif");
 
 		Tool.writeFile(printer.getSource(), outputPath+hFile);
+	}
+
+//	TODO: handle merged callbacks
+	private static void generateCallbacks(
+			HashMap<CSpecification, LogicPluginShellResult> toWrite) {
+	
+		String prefix = "__RVC_", specname;
+		for (CSpecification rvcParser : toWrite.keySet()) {
+			if(!hasInit && !((RVParserAdapter) rvcParser).getInit().isEmpty()){
+				printer.printLn("void init();");
+				hasInit = true;
+			}
+
+			if(toWrite.get(rvcParser) != null){
+				//				printer.printLn((String) toWrite.get(rvcParser).properties.get("header declarations"));
+				String s = (String) toWrite.get(rvcParser).properties.get("header declarations");
+				String[] sa = s.trim().split(";");
+				specname = rvcParser.getSpecName();
+				for (String string : sa) {
+					string = string.trim();
+					if(string.contains("ConstPtr&"))
+						string = string.replace(prefix+specname, "monitorCallback");
+					printer.printLn(string);
+				}
+			}else{
+				for(Event event : ((RVParserAdapter) rvcParser).getEventsList()){
+					printer.printLn("void monitorCallback_" + event.getName() + event.getDefinition() + ";");
+				}
+			}
+		}		
+	}
+
+	private static void populateAddedTopics(HashMap<CSpecification, LogicPluginShellResult> toWrite) {
+		for (CSpecification rvcParser : toWrite.keySet()) {
+			for(Event event : ((RVParserAdapter) rvcParser).getEventsList()){
+				if(!addedTopics.containsKey(event.getTopic())){
+					addedTopics.put(event.getTopic(), new ArrayList<Event>());
+					addedTopics.get(event.getTopic()).add(event);
+				}else {
+					addedTopics.get(event.getTopic()).add(event);
+				}
+			}
+		}
 	}
 
 	private static void printRosIncludes() {
