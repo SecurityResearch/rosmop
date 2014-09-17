@@ -229,6 +229,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     String preDeclarations = "";
     ArrayList<String> languageModifiers = new ArrayList<String>();
     Token modifier;
+    String name;
     String languageParameters = "";
     String languageDeclarations = "";
     String init = "";
@@ -249,6 +250,8 @@ public class ROSMOPParser implements ROSMOPParserConstants {
         break label_2;
       }
     }
+        name = languageModifiers.get(languageModifiers.size() - 1);
+        languageModifiers.remove(languageModifiers.size() - 1);
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case LPAREN:
     case BACKTICK:
@@ -275,8 +278,8 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     }
     label_3:
     while (true) {
-      myEvent = event();
-                                            events.add(myEvent);
+      myEvent = event(name);
+                                                events.add(myEvent);
       if (jj_2_1(2)) {
         ;
       } else {
@@ -293,18 +296,16 @@ public class ROSMOPParser implements ROSMOPParserConstants {
         jj_la1[4] = jj_gen;
         break label_4;
       }
-      myProperty = propertyAndHandlers();
-                                             properties.add(myProperty);
+      myProperty = propertyAndHandlers(name);
+                                                 properties.add(myProperty);
     }
     jj_consume_token(RBRACE);
-        String name = languageModifiers.get(languageModifiers.size() - 1);
-        languageModifiers.remove(languageModifiers.size() - 1);
-        {if (true) return new Specification(preDeclarations, languageModifiers, name, languageParameters,
+       {if (true) return new Specification(preDeclarations, languageModifiers, name, languageParameters,
             languageDeclarations, init, events, properties);}
     throw new Error("Missing return statement in function");
   }
 
-  final public Event event() throws ParseException {
+  final public Event event(String specName) throws ParseException {
     ArrayList<String> modifiers = new ArrayList<String>();
     Token modifier;
     Token name;
@@ -352,11 +353,11 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     jj_consume_token(LBRACE);
          eventAction = parseMatchingCurlyBrackets();
      {if (true) return new Event(modifiers, name.image, definitionModifiers, eventDefinition, topic.image,
-        msgType.image, pattern, eventAction);}
+        msgType.image, pattern, eventAction, specName);}
     throw new Error("Missing return statement in function");
   }
 
-  final public Property propertyAndHandlers() throws ParseException {
+  final public Property propertyAndHandlers(String specName) throws ParseException {
     Token name;
     Token notAt;
     String syntax = "";
@@ -378,7 +379,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
         break label_7;
       }
     }
-     {if (true) return new Property(name.image, syntax, propertyHandlers);}
+     {if (true) return new Property(name.image, syntax, propertyHandlers, specName);}
     throw new Error("Missing return statement in function");
   }
 
@@ -437,11 +438,6 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     finally { jj_save(0, xla); }
   }
 
-  private boolean jj_3_1() {
-    if (jj_3R_8()) return true;
-    return false;
-  }
-
   private boolean jj_3R_9() {
     if (jj_scan_token(ID)) return true;
     return false;
@@ -455,6 +451,11 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     }
     if (jj_scan_token(EVENT)) return true;
     if (jj_scan_token(ID)) return true;
+    return false;
+  }
+
+  private boolean jj_3_1() {
+    if (jj_3R_8()) return true;
     return false;
   }
 

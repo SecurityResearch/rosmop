@@ -27,10 +27,6 @@ public final class GeneratorUtil {
 	public static final String MONITOR_FILE_NAME = "rvmonitor";
 	
 	public static final String MONITOR_COPY_MSG_NAME = "rv_msg";
-	
-	public static final String AUTHENTICATED_MSG_TYPE = "msg_auth::AuthenticatedMessage";
-	
-	public static final String AUTHENTICATED_MSG_CALLBACK = "authCallBack";
 
 	public static final String MONITOR_TOPICS_AND_TYPES = "topicsAndTypes";
 }

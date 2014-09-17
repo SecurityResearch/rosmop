@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import rosmop.codegen.GeneratorUtil;
 import rosmop.parser.ast.visitor.GeneratorCommongUtil;
 
 /**
@@ -20,13 +21,12 @@ public class Event {
 	private String definition; //parameters
 	private final String topic, msgType;
 	private String pattern;
-	private final String action;
+	private String action;
 
+	private final String specName;
 	private List<Variable> parameters;
 	private HashMap<String, String> patternMap;
-
-	//	TODO: need specname??
-
+	private List<Event> publishKeywordEvents = null;
 
 	/**
 	 * Construct an Event out of its component parts.
@@ -37,7 +37,7 @@ public class Event {
 	 */
 	public Event(final List<String> modifiers, final String name, 
 			final List<String> definitionModifiers, final String definition, final String topic, 
-			final String msgType, final String pattern, final String action) {
+			final String msgType, final String pattern, final String action, final String specName) {
 		this.modifiers = Collections.unmodifiableList(new ArrayList<String>(modifiers));
 		this.name = name;
 		this.definitionModifiers = Collections.unmodifiableList(
@@ -47,9 +47,12 @@ public class Event {
 		this.msgType = msgType;
 		this.pattern = pattern;
 		this.action = action;
-		
+		this.specName = specName;
+
 		parameterize();
 		matchParametersToPattern();
+		replaceMESSAGE();
+		createEventOutOfPublish();
 	}
 
 	private void parameterize() {
@@ -62,14 +65,11 @@ public class Event {
 			parameters = new ArrayList<Variable>();
 			patternMap = new HashMap<String, String>();
 			for (String string : vars) {
-//				System.out.println(string.trim());
+				//				System.out.println(string.trim());
 				if(string.trim().startsWith("//")) continue;
 				parameters.add(new Variable(string.trim()));
 			}
 		}
-		
-		String eventMsgType = msgType.replace("/", "::");
-		definition = "(const " + eventMsgType + "::ConstPtr& " + GeneratorCommongUtil.MONITORED_MSG_NAME + ")";
 	}
 
 	private void matchParametersToPattern() {
@@ -90,6 +90,87 @@ public class Event {
 				//				System.out.println(msgField + ":" + varName);
 			}
 		}
+	}
+
+	private void replaceMESSAGE(){
+		String preproc = action, accum = "", message = null;
+		int i1 = 0;
+
+		while(i1 < preproc.length()){
+			String st = preproc.substring(i1);
+			if(st.indexOf("MESSAGE") != -1){ 
+				accum += st.substring(0, st.indexOf("MESSAGE"));
+				i1 += st.indexOf("MESSAGE");
+
+				//the MESSAGE keyword
+				message = preproc.substring(i1, preproc.indexOf(";", i1)+1);
+				//					System.out.println(message);
+
+				accum += GeneratorUtil.MONITOR_COPY_MSG_NAME + ";";
+				//					System.out.println(accum);
+				i1 += message.length();
+			} else break;
+		}
+
+		if(!accum.equals("")) {
+			action = accum + preproc.substring(i1);
+		}
+	}
+	
+	private void createEventOutOfPublish(){
+
+		String preproc = action, publish, message, serialize, accum = "", topic, msgType;
+		int i1 = 0, count = 1, i2, i3;
+
+		while(i1 < preproc.length()){
+			if(publishKeywordEvents == null)
+				publishKeywordEvents = new ArrayList<Event>();
+			
+			String st = preproc.substring(i1);
+//			System.out.println(st);
+			if(st.indexOf("PUBLISH") != -1){ 
+				accum += st.substring(0, st.indexOf("PUBLISH"));
+				i1 += st.indexOf("PUBLISH");
+
+				//the whole PUBLISH statement (whole line)
+				publish = preproc.substring(i1, preproc.indexOf(";", i1)+1);
+//				System.out.println("=================="+publish);
+				
+				i2 = publish.indexOf(",");
+				//topic name
+//				topic = publish.substring(publish.indexOf("(\"")+2, i2);
+				topic = publish.substring(publish.indexOf("(")+1, i2);
+				topic = topic.trim();
+				topic = topic.replaceAll("\"", "");
+//				System.out.println(topic);
+
+				i3 = publish.lastIndexOf(",")+1;
+				//message variable
+				message = publish.substring(i3, publish.lastIndexOf(")"));
+				message = message.trim();
+//				System.out.println("***"+message);
+				
+				//message type
+				msgType = publish.substring(i2+1, i3-1);
+				msgType = msgType.trim();
+				msgType = msgType.replaceAll("\"", "");
+//				System.out.println(msgType);
+				
+				Event pubevent = new Event(new ArrayList<String>(), "publish"+message+count, new ArrayList<String>(), "()", topic, msgType.replace("::", "/"), "{}", "{}", specName);
+				publishKeywordEvents.add(pubevent);
+				
+				serialize = "ros::SerializedMessage serializedMsg" + count +" = ros::serialization::serializeMessage(" + message + ");\n" 
+						+ GeneratorCommongUtil.SERVERMANAGER_PTR_NAME + "->publish(\"" + topic + "\", serializedMsg" + count +");";
+				
+				accum += serialize;
+				
+				i1 += publish.length();
+				count++;
+			} else break;
+		}
+		
+		action = accum + preproc.substring(i1);
+//		System.out.println(this.content);
 	}
 
 	public String classifyMsgType() {
@@ -146,6 +227,18 @@ public class Event {
 	 */
 	public String getAction() {
 		return action;
+	}
+
+	public String getSpecName() {
+		return specName;
+	}
+
+	public List<Variable> getParameters() {
+		return parameters;
+	}
+
+	public List<Event> getPublishKeywordEvents() {
+		return publishKeywordEvents;
 	}
 
 }

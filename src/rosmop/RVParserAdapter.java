@@ -1,7 +1,7 @@
 package rosmop;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.HashMap;
 
 import com.runtimeverification.rvmonitor.c.rvc.CSpecification;
@@ -36,17 +36,27 @@ public class RVParserAdapter implements CSpecification {
 		return wrapped.getName();
 	}
 
-	@Override
-	public HashMap<String, String> getEvents() {
-		HashMap<String, String> events = new HashMap<String, String>();
+    @Override
+    public HashMap<String, String> getEvents() {
+        HashMap<String, String> events = new HashMap<String, String>();
+        for(Event event : wrapped.getEvents()) {
+            events.put(event.getName(), event.getAction());
+        }
+        return events;
+    }
+
+	public List<Event> getEventsList() {
+		ArrayList<Event> events = new ArrayList<Event>();
 		for(Event event : wrapped.getEvents()) {
-			events.put(event.getName(), event.getAction());
+			events.add(event);
+			if(event.getPublishKeywordEvents() != null)
+				events.addAll(event.getPublishKeywordEvents());
+		}
+		for (Property prop : wrapped.getProperties()) {
+			if(prop.getPublishKeywordEvents() != null)
+				events.addAll(prop.getPublishKeywordEvents());
 		}
 		return events;
-	}
-	
-	public List<Event> getEventsList() {
-		return wrapped.getEvents();
 	}
 
 	@Override
@@ -98,7 +108,7 @@ public class RVParserAdapter implements CSpecification {
 			return wrapped.getProperties().get(0).getSyntax();
 		else return null;
 	}
-	
+
 	public String getInit() {
 		return wrapped.getInit();
 	}

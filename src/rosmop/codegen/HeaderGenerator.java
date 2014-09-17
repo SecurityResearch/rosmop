@@ -86,32 +86,27 @@ public class HeaderGenerator {
 		Tool.writeFile(printer.getSource(), outputPath+hFile);
 	}
 
-//	TODO: handle merged callbacks
 	private static void generateCallbacks(
 			HashMap<CSpecification, LogicPluginShellResult> toWrite) {
 	
-		String prefix = "__RVC_", specname;
+		for (String topic : addedTopics.keySet()) {
+			if(addedTopics.get(topic).size() > 1){
+				printer.printLn("void mergedMonitorCallback_" + topic.replace("/", "") + 
+						"(const " + addedTopics.get(topic).get(0).getMsgType().replace("/", "::") + "::ConstPtr& " + GeneratorUtil.MONITORED_MSG_NAME + ");");
+			}else{
+				printer.printLn("void monitorCallback_" + addedTopics.get(topic).get(0).getName() + 
+						"(const " + addedTopics.get(topic).get(0).getMsgType().replace("/", "::") + "::ConstPtr& " + GeneratorUtil.MONITORED_MSG_NAME + ");");
+			}
+		}
+		
 		for (CSpecification rvcParser : toWrite.keySet()) {
 			if(!hasInit && !((RVParserAdapter) rvcParser).getInit().isEmpty()){
 				printer.printLn("void init();");
 				hasInit = true;
 			}
-
+			
 			if(toWrite.get(rvcParser) != null){
-				//				printer.printLn((String) toWrite.get(rvcParser).properties.get("header declarations"));
-				String s = (String) toWrite.get(rvcParser).properties.get("header declarations");
-				String[] sa = s.trim().split(";");
-				specname = rvcParser.getSpecName();
-				for (String string : sa) {
-					string = string.trim();
-					if(string.contains("ConstPtr&"))
-						string = string.replace(prefix+specname, "monitorCallback");
-					printer.printLn(string);
-				}
-			}else{
-				for(Event event : ((RVParserAdapter) rvcParser).getEventsList()){
-					printer.printLn("void monitorCallback_" + event.getName() + event.getDefinition() + ";");
-				}
+				printer.printLn((String) toWrite.get(rvcParser).properties.get("header declarations"));
 			}
 		}		
 	}

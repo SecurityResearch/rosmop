@@ -1,13 +1,12 @@
 package rosmop.codegen;
 
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 
 import rosmop.ROSMOPException;
 import rosmop.RVParserAdapter;
 import rosmop.parser.ast.mopspec.Event;
+import rosmop.parser.ast.mopspec.Variable;
 import rosmop.util.Tool;
 
 import com.runtimeverification.rvmonitor.c.rvc.CSpecification;
@@ -16,7 +15,6 @@ import com.runtimeverification.rvmonitor.logicpluginshells.LogicPluginShellResul
 public class CppGenerator {
 
 	protected final static SourcePrinter printer = new SourcePrinter();
-	protected static HashMap<String, ArrayList<Event>> addedTopics = new HashMap<String, ArrayList<Event>>();
 
 	public static void generateCpp(HashMap<CSpecification, LogicPluginShellResult> toWrite, String outputPath) throws FileNotFoundException, ROSMOPException{
 		String cppFile = "rvmonitor.cpp";
@@ -47,8 +45,9 @@ public class CppGenerator {
 
 		printMonitorNamespace(toWrite);
 
+		// print init()
 		if(HeaderGenerator.hasInit){
-			printer.printLn("void init(){\n");
+			printer.printLn("void " + GeneratorUtil.MONITOR_CLASS_NAME + "::init(){\n");
 			printer.indent();
 
 			for (CSpecification rvcParser : toWrite.keySet()) {
@@ -62,25 +61,19 @@ public class CppGenerator {
 			printer.printLn();
 		}
 
+		// print reset()
 		for (CSpecification rvcParser : toWrite.keySet()) {
 			if(toWrite.get(rvcParser) != null){
-				printer.printLn((String) toWrite.get(rvcParser).properties.get("reset"));
+				printer.printLn(((String) toWrite.get(rvcParser).properties.get("reset")).replace("void\n__RVC_", "void " + GeneratorUtil.MONITOR_CLASS_NAME + "::__RVC_"));
 				printer.printLn();
 			}
 		}
 
-
 		// print constructor
 		printConstructor(toWrite);
 
-		for (CSpecification rvcParser : toWrite.keySet()) {
-			if(toWrite.get(rvcParser) != null){
-			printer.printLn((String) toWrite.get(rvcParser).properties.get("event functions"));
-			printer.printLn();
-			} else {
-				// TODO: print raw monitor events!!
-			}
-		}
+		// print monitor callback functions
+		printMonitorCallbacks(toWrite);
 
 		printer.printLn();
 		printer.unindent();
@@ -111,6 +104,25 @@ public class CppGenerator {
 		printer.printLn();
 	}
 
+	private static void printMonitorInsertion(HashMap<CSpecification, LogicPluginShellResult> toWrite) {
+		printer.printLn("void initMonitorTopics()");
+		printer.printLn("{");
+		printer.indent();
+
+		for (String topic : HeaderGenerator.addedTopics.keySet()) {
+			printer.printLn(GeneratorUtil.MONITOR_TOPICS_VAR + ".insert(\"" + topic + "\");");
+			printer.printLn(GeneratorUtil.MONITOR_TOPICS_AND_TYPES + "[\"" + topic + "\"] = \"" + HeaderGenerator.addedTopics.get(topic).get(0).getMsgType() + "\";");
+		}
+		printer.printLn();
+		for (CSpecification rvcParser : toWrite.keySet()) {
+			printer.printLn(GeneratorUtil.MONITOR_TOPICS_ALL + ".insert(\"" + rvcParser.getSpecName() + "\");");
+		}
+		printer.printLn();
+		printer.unindent();
+		printer.printLn("}");
+		printer.printLn();
+	}
+
 	private static void printAdvertisingOptions(HashMap<CSpecification, LogicPluginShellResult> toWrite) {
 		printer.printLn("void initAdvertiseOptions(std::string topic, ros::AdvertiseOptions" + " &" + GeneratorUtil.ADVERTISE_OPTIONS + ")");
 		printer.printLn("{");
@@ -122,7 +134,7 @@ public class CppGenerator {
 		//  ops_pub.init<geometry_msgs::TwistStamped>(topic,1000);
 		boolean isFirst = true;
 
-		for (String topic : addedTopics.keySet()) {
+		for (String topic : HeaderGenerator.addedTopics.keySet()) {
 			if (!isFirst) {
 				printer.print("else ");
 			} else {
@@ -133,7 +145,7 @@ public class CppGenerator {
 
 			printer.indent();
 			printer.printLn(GeneratorUtil.ADVERTISE_OPTIONS + ".init<" + 
-					addedTopics.get(topic).get(0).getMsgType().replace("/", "::") + ">(topic, 1000);");
+					HeaderGenerator.addedTopics.get(topic).get(0).getMsgType().replace("/", "::") + ">(topic, 1000);");
 			printer.unindent();
 			printer.printLn("}");
 		}
@@ -141,39 +153,6 @@ public class CppGenerator {
 		printer.unindent();
 		printer.printLn("}");
 		printer.printLn();		
-	}
-
-	private static void printMonitorInsertion(HashMap<CSpecification, LogicPluginShellResult> toWrite) {
-		String topicName, msgType;
-
-		printer.printLn("void initMonitorTopics()");
-		printer.printLn("{");
-		printer.indent();
-
-		for (CSpecification rvcParser : toWrite.keySet()) {
-			for (Event event : ((RVParserAdapter) rvcParser).getEventsList()) {
-				topicName = event.getTopic();
-				msgType = event.getMsgType();
-
-				if(!addedTopics.containsKey(topicName)){
-					addedTopics.put(topicName, new ArrayList<Event>());
-					addedTopics.get(topicName).add(event);
-
-					printer.printLn(GeneratorUtil.MONITOR_TOPICS_VAR + ".insert(\"" + topicName + "\");");
-					printer.printLn(GeneratorUtil.MONITOR_TOPICS_AND_TYPES + "[\"" + topicName + "\"] = \"" + msgType + "\";");
-
-				}else {
-					addedTopics.get(topicName).add(event);
-				}
-			}
-
-			printer.printLn(GeneratorUtil.MONITOR_TOPICS_ALL + ".insert(\"" + rvcParser.getSpecName() + "\");");
-			printer.printLn();
-		}
-
-		printer.unindent();
-		printer.printLn("}");
-		printer.printLn();
 	}
 
 	/**
@@ -206,24 +185,24 @@ public class CppGenerator {
 		// &RVt::monitorCallbackLandsharkBaseVelocityReverse, this, _1));
 		boolean isFirst = true;
 
-		for(String topic : addedTopics.keySet()){
+		for(String topic : HeaderGenerator.addedTopics.keySet()){
 			if (!isFirst) printer.print("else ");
 			else isFirst = false;
 
 			printer.printLn("if (topic == \"" + topic + "\") {");
 			printer.indent();
 
-			if(addedTopics.get(topic).size() == 1){
+			if(HeaderGenerator.addedTopics.get(topic).size() == 1){
 
 				printer.printLn(GeneratorUtil.SUBSCRIBE_OPTIONS + ".init<" + 
-						addedTopics.get(topic).get(0).getMsgType().replace("/", "::") + ">(topic, 1000, boost::bind(&" + 
+						HeaderGenerator.addedTopics.get(topic).get(0).getMsgType().replace("/", "::") + ">(topic, 1000, boost::bind(&" + 
 						GeneratorUtil.MONITOR_CLASS_NAME +
-						"::monitorCallback_" + addedTopics.get(topic).get(0).getName() + ", this, _1));");
+						"::monitorCallback_" + HeaderGenerator.addedTopics.get(topic).get(0).getName() + ", this, _1));");
 			}else{
 				String callback = "::mergedMonitorCallback_" + topic.replace("/", "");
 
 				printer.printLn(GeneratorUtil.SUBSCRIBE_OPTIONS + ".init<" + 
-						addedTopics.get(topic).get(0).getMsgType().replace("/", "::") + ">(topic, 1000, boost::bind(&" + 
+						HeaderGenerator.addedTopics.get(topic).get(0).getMsgType().replace("/", "::") + ">(topic, 1000, boost::bind(&" + 
 						GeneratorUtil.MONITOR_CLASS_NAME +
 						callback + ", this, _1));");
 			}
@@ -236,4 +215,124 @@ public class CppGenerator {
 		printer.printLn("}");
 		printer.printLn();
 	}
+
+	private static void printMonitorCallbacks(
+			HashMap<CSpecification, LogicPluginShellResult> toWrite) {
+
+		for (CSpecification rvcParser : toWrite.keySet()) {
+			for (Event event : ((RVParserAdapter) rvcParser).getEventsList()) {
+				if(HeaderGenerator.addedTopics.get(event.getTopic()).size() > 1){
+					printer.printLn("void " + GeneratorUtil.MONITOR_CLASS_NAME + "::mergedMonitorCallback_" + event.getTopic().replace("/", "") + 
+							"(const " + event.getMsgType().replace("/", "::") + 
+							"::ConstPtr& " + GeneratorUtil.MONITORED_MSG_NAME + ")");
+					printer.printLn("{");
+					printer.printLn();
+					printer.indent();
+
+					//						printParametersBindingAll(HeaderGenerator.addedTopics.get(topic), GeneratorUtil.MONITORED_MSG_NAME);
+					printer.printLn();
+
+					for(Event mergeevents : HeaderGenerator.addedTopics.get(event.getTopic())){
+						if(toWrite.get(rvcParser) == null || !rvcParser.getEvents().keySet().contains(mergeevents.getName())){
+							printActionCode(mergeevents);
+						}else{
+							printRVMGeneratedFunction(mergeevents);
+						}
+						printer.printLn();
+					}
+					HeaderGenerator.addedTopics.get(event.getTopic()).clear();
+
+					publishAndSerializeMsg();
+
+					printer.unindent();
+					printer.printLn();
+					printer.printLn("}");
+					printer.printLn();
+
+				}else if(HeaderGenerator.addedTopics.get(event.getTopic()).size() > 0){
+					printer.printLn("void " + GeneratorUtil.MONITOR_CLASS_NAME + "::monitorCallback_" + event.getName() + 
+							"(const " + event.getMsgType().replace("/", "::") + 
+							"::ConstPtr& " + GeneratorUtil.MONITORED_MSG_NAME + ")");
+					printer.printLn("{");
+					printer.printLn();
+					printer.indent();
+
+					//				printParametersBinding(HeaderGenerator.addedTopics.get(topic).get(0), GeneratorUtil.MONITORED_MSG_NAME);
+					printer.printLn();
+
+					if(toWrite.get(rvcParser) == null || !rvcParser.getEvents().keySet().contains(event.getName())){
+						printActionCode(event);
+					}else{
+						printRVMGeneratedFunction(event);
+					}
+					printer.printLn();
+					HeaderGenerator.addedTopics.get(event.getTopic()).remove(event);
+
+					publishAndSerializeMsg();
+
+					printer.unindent();
+					printer.printLn();
+					printer.printLn("}");
+					printer.printLn();
+				}
+			}
+
+			if(toWrite.get(rvcParser) != null){
+				String str = (String) toWrite.get(rvcParser).properties.get("event functions");
+//				String[] classstr = str.trim().split("void\n__RVC_");
+//				int c = 1;
+//				for (String string : classstr) {
+//					System.out.println(c++ + "*****\n" + string);
+//				}
+				printer.printLn(str.replace("void\n__RVC_", "void " + GeneratorUtil.MONITOR_CLASS_NAME + "::__RVC_"));
+				printer.printLn();
+			}
+		}
+	}
+
+	private static void printActionCode(Event event) {
+		printer.printLn("if(monitor::" + GeneratorUtil.MONITOR_TOPICS_ENB + ".find(\"" + event.getSpecName() + "\") != monitor::" + GeneratorUtil.MONITOR_TOPICS_ENB + ".end())");
+		//		printer.printLn("{");
+		//		printer.indent();
+
+		printer.print(event.getAction());
+		printer.printLn();
+		//		printer.unindent();
+		//		printer.printLn("}");
+		printer.printLn();
+	}
+
+	private static void printRVMGeneratedFunction(Event mergeevents) {
+		//		__RVC_safeTrigger_checkPoint(std::string monitored_name, double monitored_position)
+		printer.printLn("if(monitor::" + GeneratorUtil.MONITOR_TOPICS_ENB + 
+				".find(\"" + mergeevents.getSpecName() + "\") != monitor::" + GeneratorUtil.MONITOR_TOPICS_ENB + ".end())");
+		printer.printLn("{");
+		printer.printLn();
+		printer.indent();
+
+		printer.print("__RVC_" + mergeevents.getSpecName() + "_" + mergeevents.getName() + "(");
+		if(mergeevents.getParameters() != null && mergeevents.getParameters().size() != 0){
+			int c = mergeevents.getParameters().size()-1;
+			for (Variable var : mergeevents.getParameters()) {
+				printer.print(var.getDeclaredName() + ((c-- > 0) ? ", " : ""));
+			}
+		}
+		printer.printLn(");");
+
+		printer.unindent();
+		printer.printLn();
+		printer.printLn("}");
+		printer.printLn();		
+	}
+
+	private static void publishAndSerializeMsg() {
+		// ros::SerializedMessage serializedMsg = ros::serialization::serializeMessage(msgName);
+		// publishPtr->publish(serializedMsg);
+		String serializedMessage = "ros::SerializedMessage serializedMsg = ros::serialization::serializeMessage(" + GeneratorUtil.MONITOR_COPY_MSG_NAME + ");";
+		printer.print(serializedMessage);
+		printer.printLn();
+		serializedMessage = GeneratorUtil.SERVERMANAGER_PTR_NAME + "->publish(" + GeneratorUtil.TOPIC_PTR_NAME + ", serializedMsg);";
+		printer.print(serializedMessage);
+	}
+
 }

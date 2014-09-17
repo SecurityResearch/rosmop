@@ -7,7 +7,7 @@ package rosmop.parser.ast.mopspec;
 public class PropertyHandler {
     
     private final String state;
-    private final String action;
+    private String action;
     
     /**
      * Construct a PropertyHandler out of its component elements.
@@ -34,4 +34,8 @@ public class PropertyHandler {
     public String getAction() {
         return action;
     }
+
+	public void setAction(String action) {
+		this.action = action;
+	}
 }

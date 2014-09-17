@@ -250,6 +250,7 @@ Specification specification() : {
     String preDeclarations = "";
     ArrayList<String> languageModifiers = new ArrayList<String>();
     Token modifier;
+    String name;
     String languageParameters = "";
     String languageDeclarations = "";
     String init = "";
@@ -260,25 +261,25 @@ Specification specification() : {
 }
 {
     (modifier = <ID> {languageModifiers.add(modifier.image);})+
-    (languageParameters = delimitedNoCurly())?
+    {
+        name = languageModifiers.get(languageModifiers.size() - 1);
+        languageModifiers.remove(languageModifiers.size() - 1);    }    (languageParameters = delimitedNoCurly())?
     "{"
         {languageDeclarations = parseUntilLineMatches(Pattern.compile(
             "^([-a-zA-Z\\s_]*)(init|event([a-zA-Z_\\s0-9]+))\\("));}
 
 		[ <INIT> "(" ")" "{" { init = parseMatchingCurlyBrackets(); } ]
 
-        (LOOKAHEAD( 2 ) myEvent = event() { events.add(myEvent); })+
-        (myProperty = propertyAndHandlers() {properties.add(myProperty);})*
+        (LOOKAHEAD( 2 ) myEvent = event(name) { events.add(myEvent); })+
+        (myProperty = propertyAndHandlers(name) {properties.add(myProperty);})*
     "}"
     {
-        String name = languageModifiers.get(languageModifiers.size() - 1);
-        languageModifiers.remove(languageModifiers.size() - 1);
-        return new Specification(preDeclarations, languageModifiers, name, languageParameters,
+       return new Specification(preDeclarations, languageModifiers, name, languageParameters,
             languageDeclarations, init, events, properties);
     }
 }
 
-Event event() : {
+Event event(String specName) : {
     ArrayList<String> modifiers = new ArrayList<String>();
     Token modifier;
     Token name;
@@ -301,10 +302,10 @@ Event event() : {
     "'" {pattern = parseUntil("'"); /*System.out.println(pattern);*/} "'"
     "{" {eventAction = parseMatchingCurlyBrackets();}
     {return new Event(modifiers, name.image, definitionModifiers, eventDefinition, topic.image, 
-        msgType.image, pattern, eventAction);}
+        msgType.image, pattern, eventAction, specName);}
 }
 
-Property propertyAndHandlers() : {
+Property propertyAndHandlers(String specName) : {
     Token name;
     Token notAt;
     String syntax = "";
@@ -316,7 +317,7 @@ Property propertyAndHandlers() : {
     ":"
     {syntax = parseUntil("@");}
     (handler = propertyHandler() {propertyHandlers.add(handler);})+
-    {return new Property(name.image, syntax, propertyHandlers);}
+    {return new Property(name.image, syntax, propertyHandlers, specName);}
 }
 
 PropertyHandler propertyHandler() : {
