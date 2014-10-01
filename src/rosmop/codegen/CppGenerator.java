@@ -2,11 +2,15 @@ package rosmop.codegen;
 
 import java.io.FileNotFoundException;
 import java.util.HashMap;
+import java.util.Map;
 
 import rosmop.ROSMOPException;
 import rosmop.RVParserAdapter;
 import rosmop.parser.ast.mopspec.Event;
+import rosmop.parser.ast.mopspec.ROSMOPParameter;
 import rosmop.parser.ast.mopspec.Variable;
+import rosmop.parser.ast.visitor.GeneratorCommongUtil;
+import rosmop.util.MessageParser;
 import rosmop.util.Tool;
 
 import com.runtimeverification.rvmonitor.c.rvc.CSpecification;
@@ -257,7 +261,7 @@ public class CppGenerator {
 					printer.printLn();
 					printer.indent();
 
-					//				printParametersBinding(HeaderGenerator.addedTopics.get(topic).get(0), GeneratorUtil.MONITORED_MSG_NAME);
+					printParametersBinding(event);
 					printer.printLn();
 
 					if(toWrite.get(rvcParser) == null || !rvcParser.getEvents().keySet().contains(event.getName())){
@@ -279,12 +283,39 @@ public class CppGenerator {
 
 			if(toWrite.get(rvcParser) != null){
 				String str = (String) toWrite.get(rvcParser).properties.get("event functions");
-//				String[] classstr = str.trim().split("void\n__RVC_");
-//				int c = 1;
-//				for (String string : classstr) {
-//					System.out.println(c++ + "*****\n" + string);
-//				}
 				printer.printLn(str.replace("void\n__RVC_", "void " + GeneratorUtil.MONITOR_CLASS_NAME + "::__RVC_"));
+				printer.printLn();
+			}
+		}
+	}
+
+	private static void printParametersBinding(Event event) {
+		// geometry_msgs::TwistStamped rv_msg;
+		// rv_msg.header = msg->header;
+		// rv_msg.twist = msg->twist;
+
+		// float& H = rv_msg.header;
+		// double& A = rv_msg.twist.angular;
+		// ...
+
+		printer.printLn(event.classifyMsgType() + " " + GeneratorCommongUtil.MONITOR_COPY_MSG_NAME + ";");
+
+		Map<String, String> msgMapping = MessageParser.parseMessage(event.getMsgType());
+		for (String msgName : msgMapping.keySet()) {
+			printer.printLn(GeneratorCommongUtil.MONITOR_COPY_MSG_NAME + "." + msgName + " = " +
+					GeneratorUtil.MONITORED_MSG_NAME + "->" + msgName + ";");
+		}
+
+		printer.printLn();
+		printer.printLn();
+
+		if(event.getParameters() != null){
+			for (Variable parameter : event.getParameters()) {
+				if(parameter.getType().endsWith("[]")){
+					printer.print("vector<" + parameter.getType().replace("[]", "") + ">" + "& " + parameter.getDeclaredName() + " = ");
+				} else
+					printer.print(parameter.getType() + "& " + parameter.getDeclaredName() + " = ");
+				printer.print(GeneratorCommongUtil.MONITOR_COPY_MSG_NAME + "." + event.getPatternMap().get(parameter.getDeclaredName()) + ";");
 				printer.printLn();
 			}
 		}

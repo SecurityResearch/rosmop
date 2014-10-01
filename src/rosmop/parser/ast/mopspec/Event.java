@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import rosmop.codegen.GeneratorUtil;
 import rosmop.parser.ast.visitor.GeneratorCommongUtil;
@@ -76,10 +74,18 @@ public class Event {
 		pattern = pattern.substring(1, pattern.length()-1);
 		// get rid of multiline comments!!
 		pattern = pattern.replaceAll("(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)","");
-		String[] pairs = pattern.trim().split(",");
-		String msgField, varName;
-		if(!pattern.isEmpty()){
+		System.out.println(pattern);
+		if(!pattern.isEmpty())
 			patternMap = new HashMap<String, String>();
+		String s;
+		while(pattern.contains("{")){
+			s = pattern.substring(pattern.lastIndexOf("{"), pattern.indexOf("}")+1);
+			System.out.println("inside " + s);
+			pattern = pattern.replace(s, "");
+			System.out.println("left " + pattern);
+
+			String[] pairs = s.substring(1, s.length()-1).trim().split(",");
+			String msgField, varName;
 			for (String string : pairs) {
 				varName = string.substring(string.lastIndexOf(":")+1, string.length()).trim();
 				string = string.substring(0, string.lastIndexOf(":")).trim();
@@ -87,9 +93,23 @@ public class Event {
 				msgField = string.trim();
 
 				patternMap.put(varName, msgField);
-				//				System.out.println(msgField + ":" + varName);
+				System.out.println(msgField + ":" + varName);
 			}
 		}
+		//		String[] pairs = pattern.trim().split(",");
+		//		String msgField, varName;
+		//		if(!pattern.isEmpty()){
+		//			patternMap = new HashMap<String, String>();
+		//			for (String string : pairs) {
+		//				varName = string.substring(string.lastIndexOf(":")+1, string.length()).trim();
+		//				string = string.substring(0, string.lastIndexOf(":")).trim();
+		//
+		//				msgField = string.trim();
+		//
+		//				patternMap.put(varName, msgField);
+		////				System.out.println(msgField + ":" + varName);
+		//			}
+		//		}
 	}
 
 	private void replaceMESSAGE(){
@@ -116,7 +136,7 @@ public class Event {
 			action = accum + preproc.substring(i1);
 		}
 	}
-	
+
 	private void createEventOutOfPublish(){
 
 		String preproc = action, publish, message, serialize, accum = "", topic, msgType;
@@ -125,52 +145,52 @@ public class Event {
 		while(i1 < preproc.length()){
 			if(publishKeywordEvents == null)
 				publishKeywordEvents = new ArrayList<Event>();
-			
+
 			String st = preproc.substring(i1);
-//			System.out.println(st);
+			//			System.out.println(st);
 			if(st.indexOf("PUBLISH") != -1){ 
 				accum += st.substring(0, st.indexOf("PUBLISH"));
 				i1 += st.indexOf("PUBLISH");
 
 				//the whole PUBLISH statement (whole line)
 				publish = preproc.substring(i1, preproc.indexOf(";", i1)+1);
-//				System.out.println("=================="+publish);
-				
+				//				System.out.println("=================="+publish);
+
 				i2 = publish.indexOf(",");
 				//topic name
-//				topic = publish.substring(publish.indexOf("(\"")+2, i2);
+				//				topic = publish.substring(publish.indexOf("(\"")+2, i2);
 				topic = publish.substring(publish.indexOf("(")+1, i2);
 				topic = topic.trim();
 				topic = topic.replaceAll("\"", "");
-//				System.out.println(topic);
+				//				System.out.println(topic);
 
 				i3 = publish.lastIndexOf(",")+1;
 				//message variable
 				message = publish.substring(i3, publish.lastIndexOf(")"));
 				message = message.trim();
-//				System.out.println("***"+message);
-				
+				//				System.out.println("***"+message);
+
 				//message type
 				msgType = publish.substring(i2+1, i3-1);
 				msgType = msgType.trim();
 				msgType = msgType.replaceAll("\"", "");
-//				System.out.println(msgType);
-				
+				//				System.out.println(msgType);
+
 				Event pubevent = new Event(new ArrayList<String>(), "publish"+message+count, new ArrayList<String>(), "()", topic, msgType.replace("::", "/"), "{}", "{}", specName);
 				publishKeywordEvents.add(pubevent);
-				
+
 				serialize = "ros::SerializedMessage serializedMsg" + count +" = ros::serialization::serializeMessage(" + message + ");\n" 
 						+ GeneratorCommongUtil.SERVERMANAGER_PTR_NAME + "->publish(\"" + topic + "\", serializedMsg" + count +");";
-				
+
 				accum += serialize;
-				
+
 				i1 += publish.length();
 				count++;
 			} else break;
 		}
-		
+
 		action = accum + preproc.substring(i1);
-//		System.out.println(this.content);
+		//		System.out.println(this.content);
 	}
 
 	public String classifyMsgType() {
@@ -239,6 +259,10 @@ public class Event {
 
 	public List<Event> getPublishKeywordEvents() {
 		return publishKeywordEvents;
+	}
+
+	public HashMap<String, String> getPatternMap() {
+		return patternMap;
 	}
 
 }
