@@ -41,7 +41,9 @@ public interface ROSMOPParserConstants {
   /** RegularExpression Id. */
   int BACKTICK = 15;
   /** RegularExpression Id. */
-  int NAMING = 16;
+  int COMMA = 16;
+  /** RegularExpression Id. */
+  int NAMING = 17;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -64,6 +66,7 @@ public interface ROSMOPParserConstants {
     "<DIGIT>",
     "<LETTER>",
     "\"`\"",
+    "\",\"",
     "<NAMING>",
     "\"\\\'\"",
   };

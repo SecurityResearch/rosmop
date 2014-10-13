@@ -5,10 +5,12 @@
               directory with the processing instruction <?eclipse.ant.import?>
               as the first entry and export the buildfile again. -->
 <project basedir="." default="makejar" name="rosmop">
-    <property name="target" value="1.6"/>
-    <property name="source" value="1.6"/>
+    <property name="target" value="1.7"/>
+    <property name="source" value="1.7"/>
+<!--    <property name="lib.dir" value="${basedir}/lib" /> -->
     <path id="rosmop.classpath">
-        <pathelement location="bin"/>
+		<fileset dir="lib" includes="**/*.jar"/>
+<!--        <pathelement location="bin"/> -->
     </path>
 	
 	<!--checking if for windows and non windows OS-->
@@ -51,9 +53,10 @@
     <target depends="build-project" name="build"/>
     <target depends="init" name="build-project">
         <echo message="${ant.project.name}: ${ant.file}"/>
-        <javac destdir="bin" source="${source}" target="${target}">  <!-- debug="true" debuglevel="${debuglevel}" -->
+        <javac destdir="bin" srcdir="src" source="${source}" target="${target}" includeantruntime="false" classpathref="rosmop.classpath">  <!-- debug="true" debuglevel="${debuglevel}" 
             <src path="src"/>
-            <classpath refid="rosmop.classpath"/>
+            <classpath refid="rosmop.classpath"/> -->
+			<exclude name="**/rosmop/parser/ast/oldstructure/**/*.java" />
         </javac>
     </target>
 	<target name="makejar" description="Create Jar file" depends="ifUnix, ifNotUnix, build">

@@ -3,21 +3,12 @@
 SHDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DIR="$(dirname $SHDIR)"
 
-RVMASTER="$(dirname $DIR)"
-RVMON=$RVMASTER/src/rvmaster/src
-RVMONINC=$RVMASTER/src/rvmaster/include
-
 export LOGICPLUGINPATH=$DIR/lib/plugins
 
 PARAMS=$@
 
 function generate(){
 	java -cp "$DIR/dist/ROSMOP.jar":"$DIR/lib/*":"$DIR/lib/plugins/*" rosmop.Main $@
-}
-
-function rvcompile(){
-	catkin_make
-	source devel/setup.sh
 }
 
 if [ -f "$DIR/dist/ROSMOP.jar" ];
@@ -42,16 +33,7 @@ then
 
 	if [ -f "$FILENAME/rvmonitor.cpp" ];
 	then
-		mv $FILENAME/rvmonitor.cpp $RVMON
-		mv $FILENAME/rvmonitor.h $RVMONINC
-
-		echo "Generated files are copied."
-		echo "Compiling RVMaster..."
-
-		export -f rvcompile
-		gnome-terminal --working-directory=$RVMASTER --execute bash -c "rvcompile ; bash"
-
-		echo "Check compilation status on the new terminal."
+		echo "Done."
 	else
 		echo "Something went wrong. Monitors are not generated."
 	fi

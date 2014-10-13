@@ -13,7 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.io.*;
 
-import rosmop.parser.ast.mopspec.*;
+import rosmop.parser.ast.*;
 
 /**
  * Language-agnostic RVM file parser.
@@ -225,6 +225,7 @@ TOKEN : {
     | <DIGIT : ["0"-"9"]>
     | <LETTER : ["a"-"z","A"-"Z"]>
     | <BACKTICK : "`">
+    | <COMMA : ",">
 }
 
 TOKEN : {		//Topic and message type names
@@ -288,7 +289,7 @@ Event event(String specName) : {
     String eventDefinition = "";
     Token topic;
     Token msgType;
-    String pattern = "";
+    HashMap<String, String> pattern = new HashMap<String, String>();
     String eventAction = "";
 }
 {
@@ -299,7 +300,7 @@ Event event(String specName) : {
     (eventDefinition = delimitedSegment())
     (topic = <NAMING> /*{System.out.println(topic.image);}*/)
 	(msgType = <NAMING> /*{System.out.println(msgType.image);}*/)
-    "'" {pattern = parseUntil("'"); /*System.out.println(pattern);*/} "'"
+    "'" {pattern = pattern(pattern, ""); /*pattern = parseUntil("'"); /*System.out.println(pattern);*/} "'"
     "{" {eventAction = parseMatchingCurlyBrackets();}
     {return new Event(modifiers, name.image, definitionModifiers, eventDefinition, topic.image, 
         msgType.image, pattern, eventAction, specName);}
@@ -345,4 +346,27 @@ String delimitedNoCurly() : {
 {
     ("`" { return parseBacktickSegment(); }) |
     ("(" { return parseMatchingParens(); })
+}
+
+HashMap<String, String> pattern(HashMap<String, String> patterncol, String str):
+{
+   HashMap<String, String> patterns = patterncol;
+}
+{
+	"{" 
+		{ innerpattern(patterncol, str); }
+		( LOOKAHEAD(2) <COMMA> { innerpattern(patterncol, str); } )*
+	"}"
+	{ return patterns; }	 
+}
+
+void innerpattern(HashMap<String, String> patterncol, String str):
+{
+	String t = null;
+}
+{
+	[ (<NAMING>|<ID>) { t = token.image; str += t; }
+	  <COLON> ( ( (<NAMING>|<ID>) { patterncol.put((String) token.image, str); } ) 
+				| { str += "."; pattern(patterncol, str); } )
+	]
 }

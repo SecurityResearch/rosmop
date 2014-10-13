@@ -6,7 +6,7 @@ import java.util.HashMap;
 
 import com.runtimeverification.rvmonitor.c.rvc.CSpecification;
 
-import rosmop.parser.ast.mopspec.*;
+import rosmop.parser.ast.*;
 
 /**
  * Wrap the language-neutral specification in a way to easily make accessible the data the C code 

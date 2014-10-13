@@ -6,7 +6,7 @@ import java.util.HashMap;
 
 import rosmop.ROSMOPException;
 import rosmop.RVParserAdapter;
-import rosmop.parser.ast.mopspec.Event;
+import rosmop.parser.ast.Event;
 import rosmop.util.Tool;
 
 import com.runtimeverification.rvmonitor.c.rvc.CSpecification;

@@ -27,10 +27,10 @@ import com.runtimeverification.rvmonitor.util.RVMException;
 
 import rosmop.codegen.CppGenerator;
 import rosmop.codegen.HeaderGenerator;
-import rosmop.parser.ast.mopspec.Event;
-import rosmop.parser.ast.mopspec.MonitorFile;
-import rosmop.parser.ast.mopspec.Specification;
-import rosmop.parser.ast.mopspec.Variable;
+import rosmop.parser.ast.Event;
+import rosmop.parser.ast.MonitorFile;
+import rosmop.parser.ast.Specification;
+import rosmop.parser.ast.Variable;
 import rosmop.parser.main_parser.ROSMOPParser;
 import rosmop.util.Tool;
 
@@ -120,7 +120,7 @@ public class Main {
 		}
 	}
 
-	private static void process(List<MonitorFile> readyMonitors){
+	private static void process(List<rosmop.parser.ast.MonitorFile> readyMonitors){
 		HashMap<CSpecification, LogicRepositoryData> rvcParser = new HashMap<CSpecification, LogicRepositoryData>();
 
 		try {

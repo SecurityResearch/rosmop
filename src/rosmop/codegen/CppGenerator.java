@@ -1,15 +1,16 @@
 package rosmop.codegen;
 
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import rosmop.ROSMOPException;
 import rosmop.RVParserAdapter;
-import rosmop.parser.ast.mopspec.Event;
-import rosmop.parser.ast.mopspec.ROSMOPParameter;
-import rosmop.parser.ast.mopspec.Variable;
-import rosmop.parser.ast.visitor.GeneratorCommongUtil;
+import rosmop.parser.ast.Event;
+import rosmop.parser.ast.Variable;
 import rosmop.util.MessageParser;
 import rosmop.util.Tool;
 
@@ -233,7 +234,7 @@ public class CppGenerator {
 					printer.printLn();
 					printer.indent();
 
-					//						printParametersBindingAll(HeaderGenerator.addedTopics.get(topic), GeneratorUtil.MONITORED_MSG_NAME);
+					printParametersBindingAll(event.getTopic());
 					printer.printLn();
 
 					for(Event mergeevents : HeaderGenerator.addedTopics.get(event.getTopic())){
@@ -289,6 +290,43 @@ public class CppGenerator {
 		}
 	}
 
+	private static void printParametersBindingAll(String topic) {
+		printer.printLn(HeaderGenerator.addedTopics.get(topic).get(0).classifyMsgType() + " " + GeneratorUtil.MONITOR_COPY_MSG_NAME + ";");
+
+		Map<String, String> msgMapping = new HashMap<String, String>();
+		Set<Variable> noDoubleParam = new HashSet<Variable>();
+
+		for(Event event : HeaderGenerator.addedTopics.get(topic)){
+			msgMapping.putAll(MessageParser.parseMessage(event.getMsgType()));
+
+			if(event.getParameters() != null)
+				noDoubleParam.addAll(event.getParameters());
+		}
+
+		for (String msgName : msgMapping.keySet()) {
+			printer.printLn(GeneratorUtil.MONITOR_COPY_MSG_NAME + "." + msgName + " = " +
+					GeneratorUtil.MONITORED_MSG_NAME + "->" + msgName + ";");
+		}
+
+		printer.printLn();
+		printer.printLn();
+
+		for(Event event : HeaderGenerator.addedTopics.get(topic)){
+			for (Variable parameter : event.getParameters()) {
+				if(noDoubleParam.contains(parameter)){
+					if(parameter.getType().endsWith("[]")){
+						printer.print("vector<" + parameter.getType().replace("[]", "") + ">" + "& " + parameter.getDeclaredName() + " = ");
+					} else
+						printer.print(parameter.getType() + "& " + parameter.getDeclaredName() + " = ");
+					printer.print(GeneratorUtil.MONITOR_COPY_MSG_NAME + "." + event.getPattern().get(parameter.getDeclaredName()) + ";");
+					printer.printLn();
+
+					noDoubleParam.remove(parameter);
+				}
+			}
+		}
+	}
+
 	private static void printParametersBinding(Event event) {
 		// geometry_msgs::TwistStamped rv_msg;
 		// rv_msg.header = msg->header;
@@ -298,11 +336,11 @@ public class CppGenerator {
 		// double& A = rv_msg.twist.angular;
 		// ...
 
-		printer.printLn(event.classifyMsgType() + " " + GeneratorCommongUtil.MONITOR_COPY_MSG_NAME + ";");
+		printer.printLn(event.classifyMsgType() + " " + GeneratorUtil.MONITOR_COPY_MSG_NAME + ";");
 
 		Map<String, String> msgMapping = MessageParser.parseMessage(event.getMsgType());
 		for (String msgName : msgMapping.keySet()) {
-			printer.printLn(GeneratorCommongUtil.MONITOR_COPY_MSG_NAME + "." + msgName + " = " +
+			printer.printLn(GeneratorUtil.MONITOR_COPY_MSG_NAME + "." + msgName + " = " +
 					GeneratorUtil.MONITORED_MSG_NAME + "->" + msgName + ";");
 		}
 
@@ -315,7 +353,7 @@ public class CppGenerator {
 					printer.print("vector<" + parameter.getType().replace("[]", "") + ">" + "& " + parameter.getDeclaredName() + " = ");
 				} else
 					printer.print(parameter.getType() + "& " + parameter.getDeclaredName() + " = ");
-				printer.print(GeneratorCommongUtil.MONITOR_COPY_MSG_NAME + "." + event.getPatternMap().get(parameter.getDeclaredName()) + ";");
+				printer.print(GeneratorUtil.MONITOR_COPY_MSG_NAME + "." + event.getPattern().get(parameter.getDeclaredName()) + ";");
 				printer.printLn();
 			}
 		}

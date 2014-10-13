@@ -7,7 +7,7 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.io.*;
-import rosmop.parser.ast.mopspec.*;
+import rosmop.parser.ast.*;
 
 /** Token Manager. */
 public class ROSMOPParserTokenManager implements ROSMOPParserConstants
@@ -73,11 +73,13 @@ private int jjMoveStringLiteralDfa0_0()
    switch(curChar)
    {
       case 39:
-         return jjStopAtPos(0, 17);
+         return jjStopAtPos(0, 18);
       case 40:
          return jjStopAtPos(0, 6);
       case 41:
          return jjStopAtPos(0, 7);
+      case 44:
+         return jjStopAtPos(0, 16);
       case 58:
          return jjStopAtPos(0, 8);
       case 64:
@@ -208,8 +210,8 @@ private int jjMoveNfa_0(int startState, int curPos)
                case 16:
                   if ((0x53ffe40000000000L & l) != 0L)
                   {
-                     if (kind > 16)
-                        kind = 16;
+                     if (kind > 17)
+                        kind = 17;
                      jjCheckNAdd(5);
                   }
                   if ((0x3ff600000000000L & l) != 0L)
@@ -222,8 +224,8 @@ private int jjMoveNfa_0(int startState, int curPos)
                case 0:
                   if ((0x53ffe40000000000L & l) != 0L)
                   {
-                     if (kind > 16)
-                        kind = 16;
+                     if (kind > 17)
+                        kind = 17;
                      jjCheckNAdd(5);
                   }
                   else if ((0x100002600L & l) != 0L)
@@ -253,8 +255,8 @@ private int jjMoveNfa_0(int startState, int curPos)
                case 5:
                   if ((0x53ffe40000000000L & l) == 0L)
                      break;
-                  if (kind > 16)
-                     kind = 16;
+                  if (kind > 17)
+                     kind = 17;
                   jjCheckNAdd(5);
                   break;
                case 6:
@@ -311,8 +313,8 @@ private int jjMoveNfa_0(int startState, int curPos)
                case 16:
                   if ((0x47fffffeaffffffeL & l) != 0L)
                   {
-                     if (kind > 16)
-                        kind = 16;
+                     if (kind > 17)
+                        kind = 17;
                      jjCheckNAdd(5);
                   }
                   if ((0x7fffffe87fffffeL & l) != 0L)
@@ -325,8 +327,8 @@ private int jjMoveNfa_0(int startState, int curPos)
                case 0:
                   if ((0x47fffffeaffffffeL & l) != 0L)
                   {
-                     if (kind > 16)
-                        kind = 16;
+                     if (kind > 17)
+                        kind = 17;
                      jjCheckNAdd(5);
                   }
                   if ((0x7fffffe87fffffeL & l) != 0L)
@@ -362,8 +364,8 @@ private int jjMoveNfa_0(int startState, int curPos)
                case 5:
                   if ((0x47fffffeaffffffeL & l) == 0L)
                      break;
-                  if (kind > 16)
-                     kind = 16;
+                  if (kind > 17)
+                     kind = 17;
                   jjCheckNAdd(5);
                   break;
                case 8:
@@ -425,14 +427,14 @@ static final int[] jjnextStates = {
 /** Token literal values. */
 public static final String[] jjstrLiteralImages = {
 "", null, null, null, "\173", "\175", "\50", "\51", "\72", "\100", 
-"\145\166\145\156\164", "\151\156\151\164", null, null, null, "\140", null, "\47", };
+"\145\166\145\156\164", "\151\156\151\164", null, null, null, "\140", "\54", null, "\47", };
 
 /** Lexer state names. */
 public static final String[] lexStateNames = {
    "DEFAULT",
 };
 static final long[] jjtoToken = {
-   0x3fff1L, 
+   0x7fff1L, 
 };
 static final long[] jjtoSkip = {
    0xeL, 

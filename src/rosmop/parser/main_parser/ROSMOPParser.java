@@ -9,7 +9,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.io.*;
 
-import rosmop.parser.ast.mopspec.*;
+import rosmop.parser.ast.*;
 
 /**
  * Language-agnostic RVM file parser.
@@ -314,7 +314,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     String eventDefinition = "";
     Token topic;
     Token msgType;
-    String pattern = "";
+    HashMap<String, String> pattern = new HashMap<String, String>();
     String eventAction = "";
     label_5:
     while (true) {
@@ -347,9 +347,9 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     eventDefinition = delimitedSegment();
     topic = jj_consume_token(NAMING);
     msgType = jj_consume_token(NAMING);
-    jj_consume_token(17);
-         pattern = parseUntil("'"); /*System.out.println(pattern);*/
-    jj_consume_token(17);
+    jj_consume_token(18);
+         pattern = pattern(pattern, ""); /*pattern = parseUntil("'"); /*System.out.println(pattern);*/
+    jj_consume_token(18);
     jj_consume_token(LBRACE);
          eventAction = parseMatchingCurlyBrackets();
      {if (true) return new Event(modifiers, name.image, definitionModifiers, eventDefinition, topic.image,
@@ -431,6 +431,72 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     throw new Error("Missing return statement in function");
   }
 
+  final public HashMap<String, String> pattern(HashMap<String, String> patterncol, String str) throws ParseException {
+   HashMap<String, String> patterns = patterncol;
+    jj_consume_token(LBRACE);
+                  innerpattern(patterncol, str);
+    label_8:
+    while (true) {
+      if (jj_2_2(2)) {
+        ;
+      } else {
+        break label_8;
+      }
+      jj_consume_token(COMMA);
+                                         innerpattern(patterncol, str);
+    }
+    jj_consume_token(RBRACE);
+          {if (true) return patterns;}
+    throw new Error("Missing return statement in function");
+  }
+
+  final public void innerpattern(HashMap<String, String> patterncol, String str) throws ParseException {
+        String t = null;
+    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+    case ID:
+    case NAMING:
+      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+      case NAMING:
+        jj_consume_token(NAMING);
+        break;
+      case ID:
+        jj_consume_token(ID);
+        break;
+      default:
+        jj_la1[10] = jj_gen;
+        jj_consume_token(-1);
+        throw new ParseException();
+      }
+                            t = token.image; str += t;
+      jj_consume_token(COLON);
+      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+      case ID:
+      case NAMING:
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case NAMING:
+          jj_consume_token(NAMING);
+          break;
+        case ID:
+          jj_consume_token(ID);
+          break;
+        default:
+          jj_la1[11] = jj_gen;
+          jj_consume_token(-1);
+          throw new ParseException();
+        }
+                                        patterncol.put((String) token.image, str);
+        break;
+      default:
+        jj_la1[12] = jj_gen;
+                                    str += "."; pattern(patterncol, str);
+      }
+      break;
+    default:
+      jj_la1[13] = jj_gen;
+      ;
+    }
+  }
+
   private boolean jj_2_1(int xla) {
     jj_la = xla; jj_lastpos = jj_scanpos = token;
     try { return !jj_3_1(); }
@@ -438,24 +504,36 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     finally { jj_save(0, xla); }
   }
 
-  private boolean jj_3R_9() {
+  private boolean jj_2_2(int xla) {
+    jj_la = xla; jj_lastpos = jj_scanpos = token;
+    try { return !jj_3_2(); }
+    catch(LookaheadSuccess ls) { return true; }
+    finally { jj_save(1, xla); }
+  }
+
+  private boolean jj_3R_10() {
     if (jj_scan_token(ID)) return true;
     return false;
   }
 
-  private boolean jj_3R_8() {
+  private boolean jj_3R_9() {
     Token xsp;
     while (true) {
       xsp = jj_scanpos;
-      if (jj_3R_9()) { jj_scanpos = xsp; break; }
+      if (jj_3R_10()) { jj_scanpos = xsp; break; }
     }
     if (jj_scan_token(EVENT)) return true;
     if (jj_scan_token(ID)) return true;
     return false;
   }
 
+  private boolean jj_3_2() {
+    if (jj_scan_token(COMMA)) return true;
+    return false;
+  }
+
   private boolean jj_3_1() {
-    if (jj_3R_8()) return true;
+    if (jj_3R_9()) return true;
     return false;
   }
 
@@ -470,15 +548,15 @@ public class ROSMOPParser implements ROSMOPParserConstants {
   private Token jj_scanpos, jj_lastpos;
   private int jj_la;
   private int jj_gen;
-  final private int[] jj_la1 = new int[10];
+  final private int[] jj_la1 = new int[14];
   static private int[] jj_la1_0;
   static {
       jj_la1_init_0();
    }
    private static void jj_la1_init_0() {
-      jj_la1_0 = new int[] {0x1000,0x1000,0x8040,0x800,0x1000,0x1000,0x1000,0x200,0x8050,0x8040,};
+      jj_la1_0 = new int[] {0x1000,0x1000,0x8040,0x800,0x1000,0x1000,0x1000,0x200,0x8050,0x8040,0x21000,0x21000,0x21000,0x21000,};
    }
-  final private JJCalls[] jj_2_rtns = new JJCalls[1];
+  final private JJCalls[] jj_2_rtns = new JJCalls[2];
   private boolean jj_rescan = false;
   private int jj_gc = 0;
 
@@ -493,7 +571,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     token = new Token();
     jj_ntk = -1;
     jj_gen = 0;
-    for (int i = 0; i < 10; i++) jj_la1[i] = -1;
+    for (int i = 0; i < 14; i++) jj_la1[i] = -1;
     for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -508,7 +586,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     token = new Token();
     jj_ntk = -1;
     jj_gen = 0;
-    for (int i = 0; i < 10; i++) jj_la1[i] = -1;
+    for (int i = 0; i < 14; i++) jj_la1[i] = -1;
     for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -519,7 +597,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     token = new Token();
     jj_ntk = -1;
     jj_gen = 0;
-    for (int i = 0; i < 10; i++) jj_la1[i] = -1;
+    for (int i = 0; i < 14; i++) jj_la1[i] = -1;
     for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -530,7 +608,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     token = new Token();
     jj_ntk = -1;
     jj_gen = 0;
-    for (int i = 0; i < 10; i++) jj_la1[i] = -1;
+    for (int i = 0; i < 14; i++) jj_la1[i] = -1;
     for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -540,7 +618,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     token = new Token();
     jj_ntk = -1;
     jj_gen = 0;
-    for (int i = 0; i < 10; i++) jj_la1[i] = -1;
+    for (int i = 0; i < 14; i++) jj_la1[i] = -1;
     for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -550,7 +628,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     token = new Token();
     jj_ntk = -1;
     jj_gen = 0;
-    for (int i = 0; i < 10; i++) jj_la1[i] = -1;
+    for (int i = 0; i < 14; i++) jj_la1[i] = -1;
     for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -662,12 +740,12 @@ public class ROSMOPParser implements ROSMOPParserConstants {
   /** Generate ParseException. */
   public ParseException generateParseException() {
     jj_expentries.clear();
-    boolean[] la1tokens = new boolean[18];
+    boolean[] la1tokens = new boolean[19];
     if (jj_kind >= 0) {
       la1tokens[jj_kind] = true;
       jj_kind = -1;
     }
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 14; i++) {
       if (jj_la1[i] == jj_gen) {
         for (int j = 0; j < 32; j++) {
           if ((jj_la1_0[i] & (1<<j)) != 0) {
@@ -676,7 +754,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
         }
       }
     }
-    for (int i = 0; i < 18; i++) {
+    for (int i = 0; i < 19; i++) {
       if (la1tokens[i]) {
         jj_expentry = new int[1];
         jj_expentry[0] = i;
@@ -703,7 +781,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
 
   private void jj_rescan_token() {
     jj_rescan = true;
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 2; i++) {
     try {
       JJCalls p = jj_2_rtns[i];
       do {
@@ -711,6 +789,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
           jj_la = p.arg; jj_lastpos = jj_scanpos = p.first;
           switch (i) {
             case 0: jj_3_1(); break;
+            case 1: jj_3_2(); break;
           }
         }
         p = p.next;
