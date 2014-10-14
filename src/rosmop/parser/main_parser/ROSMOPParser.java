@@ -12,8 +12,11 @@ import java.io.*;
 import rosmop.parser.ast.*;
 
 /**
- * Language-agnostic RVM file parser.
  * @author A. Cody Schuffelen
+ * @author Cansu Erdogan
+ *
+ * Generic ROS specification file parser
+ *
  */
 public class ROSMOPParser implements ROSMOPParserConstants {
   private static ROSMOPParser parser;
@@ -511,6 +514,11 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     finally { jj_save(1, xla); }
   }
 
+  private boolean jj_3_1() {
+    if (jj_3R_9()) return true;
+    return false;
+  }
+
   private boolean jj_3R_10() {
     if (jj_scan_token(ID)) return true;
     return false;
@@ -529,11 +537,6 @@ public class ROSMOPParser implements ROSMOPParserConstants {
 
   private boolean jj_3_2() {
     if (jj_scan_token(COMMA)) return true;
-    return false;
-  }
-
-  private boolean jj_3_1() {
-    if (jj_3R_9()) return true;
     return false;
   }
 

@@ -7,20 +7,20 @@
 <project basedir="." default="makejar" name="rosmop">
     <property name="target" value="1.7"/>
     <property name="source" value="1.7"/>
-<!--    <property name="lib.dir" value="${basedir}/lib" /> -->
+	<property environment="env"/>
+	<!-- <property name="rvmlib" value="${env.RVMONITOR}/lib" /> -->
     <path id="rosmop.classpath">
-		<fileset dir="lib" includes="**/*.jar"/>
-<!--        <pathelement location="bin"/> -->
+		<fileset dir="${env.RVMONITOR}/lib" includes="**/*.jar"/>
     </path>
 	
-	<!--checking if for windows and non windows OS-->
-		<condition property="isUnix">
-			<os family="unix" />
-		</condition>
+<!--checking if for windows and non windows OS-->
+	<condition property="isUnix">
+		<os family="unix" />
+	</condition>
 
-		<condition property="isWindows">
-			<os family="windows" />
-		</condition>
+	<condition property="isWindows">
+		<os family="windows" />
+	</condition>
 
 	<!-- if the OS is windows call the target run.script.windows -->
 	<target name="ifNotUnix" if="isWindows">
@@ -33,34 +33,29 @@
 	<!-- if the OS is not windows call the target run.script.unix-->
 	<target name="ifUnix" if="isUnix">
 		<echo>Calling parser</echo>
-	   	<exec executable="scripts/parsergen" failonerror="true">
-		</exec>
+	   	<exec executable="scripts/parsergen" failonerror="true"/>
 	</target>
 	
     <target name="init">
         <mkdir dir="bin"/>
-        <!-- <copy includeemptydirs="false" todir="bin"> -->
-        <!--     <fileset dir="src"> -->
-        <!--         <exclude name="**/*.java"/> -->
-        <!--     </fileset> -->
-        <!-- </copy> -->
     </target>
+
     <target name="clean">
         <delete dir="bin"/>
-		<delete dir="dist"/>
+		<delete dir="lib"/>
     </target>
+
     <target depends="clean" name="cleanall"/>
+
     <target depends="build-project" name="build"/>
+
     <target depends="init" name="build-project">
         <echo message="${ant.project.name}: ${ant.file}"/>
-        <javac destdir="bin" srcdir="src" source="${source}" target="${target}" includeantruntime="false" classpathref="rosmop.classpath">  <!-- debug="true" debuglevel="${debuglevel}" 
-            <src path="src"/>
-            <classpath refid="rosmop.classpath"/> -->
-			<exclude name="**/rosmop/parser/ast/oldstructure/**/*.java" />
-        </javac>
+        <javac destdir="bin" srcdir="src" source="${source}" target="${target}" includeantruntime="false" classpathref="rosmop.classpath" />
     </target>
+	
 	<target name="makejar" description="Create Jar file" depends="ifUnix, ifNotUnix, build">
-		<mkdir dir="dist" />
-        <jar jarfile="dist/ROSMOP.jar" basedir="bin" />
+		<mkdir dir="lib" />
+        <jar jarfile="lib/ROSMOP.jar" basedir="bin" />
 	</target>
 </project>

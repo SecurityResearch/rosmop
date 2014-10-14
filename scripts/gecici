@@ -8,10 +8,10 @@ export LOGICPLUGINPATH=$DIR/lib/plugins
 PARAMS=$@
 
 function generate(){
-	java -cp "$DIR/dist/ROSMOP.jar":"$DIR/lib/*":"$DIR/lib/plugins/*" rosmop.Main $@
+	java -cp "$DIR/lib/ROSMOP.jar":"$RVMONITOR/lib/*":"$RVMONITOR/lib/plugins/*" rosmop.Main $@
 }
 
-if [ -f "$DIR/dist/ROSMOP.jar" ];
+if [ -f "$DIR/lib/ROSMOP.jar" ];
 then
 	FILENAME=$1
 	case "$FILENAME" in
