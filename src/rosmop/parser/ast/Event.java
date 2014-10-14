@@ -21,7 +21,7 @@ public class Event {
 	private String action;
 
 	private final String specName;
-	private List<Variable> parameters;
+	private List<Variable> parameters = null;
 	private List<Event> publishKeywordEvents = null;
 
 	/**
@@ -122,7 +122,7 @@ public class Event {
 				//message variable
 				message = publish.substring(i3, publish.lastIndexOf(")"));
 				message = message.trim();
-				//				System.out.println("***"+message);
+//								System.out.println("***"+message);
 
 				//message type
 				msgType = publish.substring(i2+1, i3-1);

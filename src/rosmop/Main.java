@@ -3,8 +3,6 @@ package rosmop;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -34,10 +32,24 @@ import rosmop.parser.ast.Variable;
 import rosmop.parser.main_parser.ROSMOPParser;
 import rosmop.util.Tool;
 
+/**
+ * @author Cansu Erdogan
+ * 
+ * Entry point when calling ROSMOP.jar
+ *
+ */
 public class Main {
 
 	static String logicPluginDirPath, pathToOutputNoExt;
 
+	/**
+	 *	Possible parameters:
+	 *	1- only one .rv file
+	 *	2- a list of .rv files
+	 *	3- a directory of .rv files -- not recursive, there shouldn't be any other files in the 
+	 *	directory
+	 * @param args One or list of .rv file(s)
+	 */
 	public static void main(String[] args) {
 		try {
 
@@ -53,7 +65,8 @@ public class Main {
 			MonitorFile readyToProcess;
 			/*
 			1- "." means current directory (all .rv files in the directory)
-			2- if it ends with "/" or "\" process the given directory (all .rv files in the directory)
+			2- if it ends with "/" or "\" process the given directory (all .rv files in the 
+				directory)
 			3- one .rv file
 			 */
 			if (args.length == 1) {
@@ -62,8 +75,7 @@ public class Main {
 					pathToFile = fileToGetPath.getAbsolutePath();
 					//					/home/cans-u/workspace/rosmop
 					//					System.out.println(pathToFile);
-					//					TODO: deleted + "rvmonitor"
-					pathToOutputNoExt = pathToFile + File.separator;
+					pathToOutputNoExt = pathToFile + File.separator + "rvmonitor";
 					//					System.out.println(pathToOutputNoExt);
 					processDirOfFiles(pathToFile);
 				} else if(args[0].endsWith(File.separator)){
@@ -71,20 +83,20 @@ public class Main {
 					pathToFile = fileToGetPath.getAbsolutePath();
 					//					/home/cans-u/Desktop
 					//					System.out.println(pathToFile);
-					//					TODO: deleted + "rvmonitor"
-					pathToOutputNoExt = pathToFile + File.separator;
+					pathToOutputNoExt = pathToFile + File.separator + "rvmonitor";
 					//					System.out.println(pathToOutputNoExt);
 					processDirOfFiles(pathToFile);
 				} else {
 					if (!checkArguments(args)) {
-						throw new ROSMOPException("Unrecognized file type! The ROSMOP specification file should have .rv as the extension.");
+						throw new ROSMOPException("Unrecognized file type! The ROSMOP "
+								+ "specification file should have .rv as the extension.");
 					}
 					fileToGetPath = new File(args[0]);
 					pathToFile = fileToGetPath.getAbsolutePath();
 					//					/home/cans-u/Desktop/deneme.rv
 					//					System.out.println(pathToFile);
-					//					TODO: deleted + "rvmonitor"
-					pathToOutputNoExt = pathToFile.substring(0, pathToFile.lastIndexOf(File.separator)+1);
+					pathToOutputNoExt = pathToFile.substring(0, 
+							pathToFile.lastIndexOf(File.separator)+1) + "rvmonitor";
 					//					System.out.println(pathToOutputNoExt);
 					readyToProcess = ROSMOPParser.parse(pathToFile);
 					List<MonitorFile> readyMonitor = new ArrayList<MonitorFile>();
@@ -96,39 +108,38 @@ public class Main {
 			 * multiple .rv files 
 			 */
 			else {
-				//					output file is going to be written in the first file's dir
+				// output file is going to be written in the first file's dir
 				fileToGetPath = new File(args[0]);
 				pathToFile = fileToGetPath.getAbsolutePath();
 				//					/home/cans-u/Desktop/deneme.rv
 				//				System.out.println(pathToFile);
-				//				TODO: deleted + "rvmonitor"
-				pathToOutputNoExt = pathToFile.substring(0, pathToFile.lastIndexOf(File.separator)+1);
+				pathToOutputNoExt = pathToFile.substring(0, 
+						pathToFile.lastIndexOf(File.separator)+1) + "rvmonitor";
 				//				System.out.println(pathToOutputNoExt);
 				processMultipleFiles(args);
 			}
-
-			//			CSpecification rvcParser = (CSpecification) new RVParserAdapter(readyToProcess);
-			//			LogicRepositoryData cmgDataOut = sendToLogicRepository(rvcParser, logicPluginDirPath);
-			//			outputCode(cmgDataOut, rvcParser, pathToOutputNoExt);  
-
-			//			Tool.writeFile(specFile.toCppFile(), diffName ? filePath : file.getAbsolutePath(), ".cpp");
-			//			Tool.writeFile(specFile.toHeaderFile(), diffName ? filePath : file.getAbsolutePath(), ".h");
-			//			
-			//			diffName = false;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	private static void process(List<rosmop.parser.ast.MonitorFile> readyMonitors){
-		HashMap<CSpecification, LogicRepositoryData> rvcParser = new HashMap<CSpecification, LogicRepositoryData>();
+	
+	/**
+	 * Wraps the parsed monitor files as CSpecifications to send them to logic repository
+	 * (unless raw monitor) and then output the .h and .cpp files 
+	 * @param readyMonitors A list of MonitorFiles which are parsed specifications
+	 */
+	private static void process(List<MonitorFile> readyMonitors){
+		HashMap<CSpecification, LogicRepositoryData> rvcParser = 
+				new HashMap<CSpecification, LogicRepositoryData>();
 
 		try {
 			for (MonitorFile mf : readyMonitors) {
 				CSpecification cspec = (CSpecification) new RVParserAdapter(mf);
 				//raw monitor
 				if(cspec.getFormalism() != null){
-					LogicRepositoryData cmgDataOut = sendToLogicRepository(cspec, logicPluginDirPath);
+					LogicRepositoryData cmgDataOut = 
+							sendToLogicRepository(cspec, logicPluginDirPath);
 					rvcParser.put(cspec, cmgDataOut);
 				} else
 					rvcParser.put(cspec, null);
@@ -138,16 +149,22 @@ public class Main {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 	}
 
+	/** 
+	 * Takes a list of .rv files and sends them to the parser
+	 * Once all the specification files are parsed, makes sure there are no duplicate
+	 * event names or field declarations, and if so sends them to {@link Main#process(List)}
+	 * @param args Takes a list of .rv files
+	 */
 	private static void processMultipleFiles(String[] args) {
 		Set<String> events = new HashSet<String>();
 		Set<String> declarations = new HashSet<String>();
 		List<MonitorFile> readyMonitors = new ArrayList<MonitorFile>();
 		try {
 			if (!checkArguments(args)) {
-				throw new ROSMOPException("Unrecognized file type! The ROSMOP specification file should have .rv as the extension.");
+				throw new ROSMOPException("Unrecognized file type! The ROSMOP specification "
+						+ "file should have .rv as the extension.");
 			}
 			for (String arg : args) {
 				MonitorFile f = ROSMOPParser.parse(arg);
@@ -178,10 +195,9 @@ public class Main {
 
 	/**
 	 * Called when the input is a directory (ends with a file separator)
+	 * After handling directory structure, calls {@link Main#processMultipleFiles(String[])}
 	 * 
-	 * @param arg name of the input directory
-	 * @return one MonitorFile including all the specifications 
-	 * 			from all .rv files in the input directory
+	 * @param arg Name of the input directory
 	 * @throws ROSMOPException
 	 */
 	private static void processDirOfFiles(String arg) throws ROSMOPException {
@@ -212,6 +228,11 @@ public class Main {
 		}
 	}
 
+	/**
+	 * Makes sure the provided input(s) is/are valid
+	 * @param args .rv file names
+	 * @return True if all provided file names end with .rv, false otherwise
+	 */
 	private static boolean checkArguments(String[] args) {
 		if(args.length == 0) return false;
 		for (String arg : args) {
@@ -223,18 +244,17 @@ public class Main {
 	}
 
 	/**
-	 * Generates the proper name for the logic plugin directory.
-	 * @param basePath The location of the project.
-	 * @return The location of the logic plugins.
+	 * Makes sure the LOGICPLUGINPATH environment variable is set.
+	 * @return The location of the logic plugins
 	 */
 	static public String readLogicPluginDir() {
 		String logicPluginDirPath = System.getenv("LOGICPLUGINPATH");
 		if (logicPluginDirPath == null || logicPluginDirPath.length() == 0) {
 			try {
 				throw new LogicException(
-						"Unrecoverable error: please set LOGICPLUGINPATH variable to refer to the plugins directory");
+						"Unrecoverable error: please set LOGICPLUGINPATH variable to refer to "
+						+ "the plugins directory");
 			} catch (LogicException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
@@ -243,11 +263,11 @@ public class Main {
 	}
 
 	/**
-	 * Send the specification to the logic repository. The appropriate logic repository plugins
-	 * are run on the code.
-	 * @param rvcParser Extracted information from the RVM C file being used.
-	 * @param logicPluginDirPath The location at which to find the logic repository plugins.
-	 * @return The output of the logic plugins.
+	 * Sends the specification to the logic repository. 
+	 * The appropriate logic repository plugins are run on the code.
+	 * @param rvcParser Wrapped AST classes of parsed specification file 
+	 * @param logicPluginDirPath The location at which to find the logic repository plugins
+	 * @return The output of the logic plugins
 	 */
 	static public LogicRepositoryData sendToLogicRepository(CSpecification rvcParser, 
 			String logicPluginDirPath) throws LogicException {
@@ -300,14 +320,17 @@ public class Main {
 	}
 
 	/**
-	 * Output code for the monitor. Creates a C and a H file, optionally compiles to LLVM.
-	 * @param cmgDataOut The output of the logic repository plugins.
-	 * @param rvcParser Extracted information from the RVM C file.
-	 * @throws RVMException 
+	 * Generates .h and .cpp files from the final monitor specification objects.
+	 * @param rvcParser Map of wrapped specifications and their logic plugin results
+	 * @param outputPath The location to output the generated monitoring code
+	 * @throws LogicException
+	 * @throws FileNotFoundException
+	 * @throws RVMException
 	 */
 	static private void outputCode(HashMap<CSpecification, LogicRepositoryData> rvcParser, 
 			String outputPath) throws LogicException, FileNotFoundException, RVMException {
-		HashMap<CSpecification, LogicPluginShellResult> toWrite = new HashMap<CSpecification, LogicPluginShellResult>();
+		HashMap<CSpecification, LogicPluginShellResult> toWrite = 
+				new HashMap<CSpecification, LogicPluginShellResult>();
 		
 		for (CSpecification cspec : rvcParser.keySet()) {
 			if(rvcParser.get(cspec) != null){
@@ -320,19 +343,19 @@ public class Main {
 		}
 
 		try {
-			HeaderGenerator.generateHeader(toWrite, outputPath);
-			CppGenerator.generateCpp(toWrite, outputPath);
+			HeaderGenerator.generateHeader(toWrite, outputPath+".h");
+			CppGenerator.generateCpp(toWrite, outputPath+".cpp");
 		} catch (ROSMOPException e) {
 			e.printStackTrace();
 		}
 	}
 
 	/**
-	 * Evaluate the appropriate logic plugin shell on the logic formalism.
-	 * @param logicOutputXML The result of the logic repository plugins.
-	 * @param rvcParser The extracted information from the C file.
-	 * @return The result of applying the appropriate logic plugin shell to the parameters.
-	 * @throws LogicException Something went wrong in applying the logic plugin shell.
+	 * Evaluates the appropriate logic plugin shell on the logic formalism.
+	 * @param logicOutputXML The result of the logic repository plugins
+	 * @param rvcParser The extracted information from the monitor specification
+	 * @return The result of applying the appropriate logic plugin shell to the parameters
+	 * @throws LogicException Something went wrong in applying the logic plugin shell
 	 * @throws RVMException 
 	 */
 	private static LogicPluginShellResult evaluateLogicPluginShell(
@@ -343,13 +366,16 @@ public class Main {
 		LogicPluginShell shell;
 
 		if("fsm".equals(logic)) {
-			shell = new CFSM((com.runtimeverification.rvmonitor.c.rvc.CSpecification) rvcParser, parametric);
+			shell = new CFSM((com.runtimeverification.rvmonitor.c.rvc.CSpecification) rvcParser, 
+					parametric);
 		}
 		else if("tfsm".equals(logic)) {
-			shell = new CTFSM((com.runtimeverification.rvmonitor.c.rvc.CSpecification) rvcParser, parametric);
+			shell = new CTFSM((com.runtimeverification.rvmonitor.c.rvc.CSpecification) rvcParser, 
+					parametric);
 		}
 		else if("cfg".equals(logic)) {
-			shell = new CCFG((com.runtimeverification.rvmonitor.c.rvc.CSpecification) rvcParser, parametric);
+			shell = new CCFG((com.runtimeverification.rvmonitor.c.rvc.CSpecification) rvcParser, 
+					parametric);
 		}
 		else {
 			throw new LogicException("Only finite logics and CFG are currently supported");

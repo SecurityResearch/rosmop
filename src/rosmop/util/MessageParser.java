@@ -4,6 +4,13 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
+/**
+ * @author Cansu Erdogan
+ *
+ * Calls "rosmsg show <message>" by creating an external process
+ * Gets the fields of a ROS message so they can be pattern-matched with provided patterns in events
+ * 
+ */
 public class MessageParser {
 
 	public static void main(String[] args) {

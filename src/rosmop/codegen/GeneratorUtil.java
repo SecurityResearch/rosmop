@@ -1,5 +1,10 @@
 package rosmop.codegen;
 
+/**
+ * @author Cansu Erdogan
+ *
+ * A collection of generic names for parts of code generation
+ */
 public final class GeneratorUtil {
 
 	public static final String MONITOR_TOPICS_VAR = "monitorTopics";

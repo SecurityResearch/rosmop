@@ -1,11 +1,14 @@
 package rosmop.codegen;
 
+/**
+ * @author Cansu Erdogan
+ *
+ * Provides the printer object and helper methods for code generation
+ */
 public final class SourcePrinter {
 
 	private int level = 0;
-
     private boolean indented = false;
-
     private final StringBuilder buf = new StringBuilder();
 
     public void indent() {

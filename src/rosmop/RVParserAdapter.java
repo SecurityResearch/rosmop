@@ -9,8 +9,11 @@ import com.runtimeverification.rvmonitor.c.rvc.CSpecification;
 import rosmop.parser.ast.*;
 
 /**
- * Wrap the language-neutral specification in a way to easily make accessible the data the C code 
- * generators need.
+ * @author Cansu Erdogan
+ *
+ * Wraps the parsed monitor specification in a way to make code generation easier.
+ * Assumes one specification per specification file.
+ * 
  */
 public class RVParserAdapter implements CSpecification {
 
@@ -18,8 +21,8 @@ public class RVParserAdapter implements CSpecification {
 	private final Specification wrapped;
 
 	/**
-	 * Wrap the given specification.
-	 * @param wrapped The specification to wrap.
+	 * Takes the first specification of the parsed file and wraps the filled ASTs
+	 * @param file Parsed specification file
 	 */
 	public RVParserAdapter(final MonitorFile file) {
 		this.file = file;
@@ -44,7 +47,12 @@ public class RVParserAdapter implements CSpecification {
         }
         return events;
     }
-
+    
+	/**
+	 * Collects all the events in the specification as Event objects, including the ones
+	 * created by the PUBLISH keyword
+	 * @return List of Event objects
+	 */
 	public List<Event> getEventsList() {
 		ArrayList<Event> events = new ArrayList<Event>();
 		for(Event event : wrapped.getEvents()) {
@@ -109,6 +117,10 @@ public class RVParserAdapter implements CSpecification {
 		else return null;
 	}
 
+	/**
+	 * Needed to collect the initialization blocks of multiple specifications
+	 * @return The initialization block
+	 */
 	public String getInit() {
 		return wrapped.getInit();
 	}
