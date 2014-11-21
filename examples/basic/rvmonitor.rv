@@ -6,14 +6,13 @@ testSpecOne() {
        int b;
 
        event controlMessageOne(std::string msg) /chatter std_msgs/String '{data:msg}'
-       <<
-       msg = msg +"RV";
+       {
+			msg = msg +"RV";
 
-	char * cstr = new char [msg.length()+1];
-	std::strcpy (cstr, msg.c_str());
+			char * cstr = new char [msg.length()+1];
+			std::strcpy (cstr, msg.c_str());
 
-
-	ROS_INFO("%s", cstr);
-       >>
+			ROS_INFO("%s", cstr);
+       }
 
 }

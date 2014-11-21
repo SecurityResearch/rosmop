@@ -4,15 +4,15 @@ SHDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DIR="$(dirname $SHDIR)"
 
 RVMASTER="$(dirname $DIR)"
-RVMASTERSRC=$RVMASTER/src/rvmaster/src
-RVMASTERINC=$RVMASTER/src/rvmaster/include
+RVMASTERSRC=$RVMASTER/src/RVMaster/src
+RVMASTERINC=$RVMASTER/src/RVMaster/include
 
 export LOGICPLUGINPATH=$DIR/lib/plugins
 
 PARAMS=$@
 
 function generate(){
-	java -cp "$DIR/lib/ROSMOP.jar":"$RVMONITOR/lib/*":"$RVMONITOR/lib/plugins/*" rosmop.Main $@
+	java -cp "$DIR/lib/ROSMOP.jar":"$RVMONITOR/*":"$RVMONITOR/plugins/*" rosmop.Main $@
 }
 
 function rvcompile(){
@@ -58,5 +58,3 @@ then
 else
    echo "Binaries are not created. Call \"ant\" first."
 fi
-
-

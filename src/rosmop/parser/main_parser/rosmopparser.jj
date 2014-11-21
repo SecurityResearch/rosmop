@@ -235,8 +235,8 @@ TOKEN : {
 }
 
 TOKEN : {		//Topic and message type names
-			< NAMING: (["A"-"Z", "a"-"z", "0"-"9", "/", "_", "~", "~", "[", "]", "*", ".", "-", "<", ">"])+ >
-		}
+	<NAMING: (["A"-"Z", "a"-"z", "0"-"9", "/", "_", "~", "~", "[", "]", "*", ".", "-", "<", ">"])+>
+}
 
 MonitorFile rvFile() : {
     String preamble;
@@ -308,7 +308,7 @@ Event event(String specName) : {
     (eventDefinition = delimitedSegment())
     (topic = <NAMING> /*{System.out.println(topic.image);}*/)
 	(msgType = <NAMING> /*{System.out.println(msgType.image);}*/)
-    "'" {pattern = pattern(pattern, ""); /*pattern = parseUntil("'"); /*System.out.println(pattern);*/} "'"
+    "'" {pattern = pattern(pattern, ""); } "'"
     "{" {eventAction = parseMatchingCurlyBrackets();}
     {return new Event(modifiers, name.image, definitionModifiers, eventDefinition, topic.image, 
         msgType.image, pattern, eventAction, specName);}

@@ -13,9 +13,9 @@ import java.util.regex.Pattern;
  */
 public class MessageParser {
 
-	public static void main(String[] args) {
-		parseMessage(args[0]);
-	}
+//	public static void main(String[] args) {
+//		parseMessage(args[0]);
+//	}
 
 	public static Map<String, String> parseMessage(String msgName) {
 		Map<String, String> msgMapping = new HashMap<String, String>();

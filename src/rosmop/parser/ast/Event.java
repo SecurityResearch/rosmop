@@ -33,7 +33,8 @@ public class Event {
 	 */
 	public Event(final List<String> modifiers, final String name, 
 			final List<String> definitionModifiers, final String definition, final String topic, 
-			final String msgType, final HashMap<String, String> pattern, final String action, final String specName) {
+			final String msgType, final HashMap<String, String> pattern, final String action, 
+			final String specName) {
 		this.modifiers = Collections.unmodifiableList(new ArrayList<String>(modifiers));
 		this.name = name;
 		this.definitionModifiers = Collections.unmodifiableList(
@@ -130,11 +131,15 @@ public class Event {
 				msgType = msgType.replaceAll("\"", "");
 				//				System.out.println(msgType);
 
-				Event pubevent = new Event(new ArrayList<String>(), "publish"+message+count, new ArrayList<String>(), "()", topic, msgType.replace("::", "/"), new HashMap<String, String>(), "{}", specName);
+				Event pubevent = new Event(new ArrayList<String>(), "publish"+message+count, 
+						new ArrayList<String>(), "()", topic, msgType.replace("::", "/"), 
+						new HashMap<String, String>(), "{}", specName);
 				publishKeywordEvents.add(pubevent);
 
-				serialize = "ros::SerializedMessage serializedMsg" + count +" = ros::serialization::serializeMessage(" + message + ");\n" 
-						+ GeneratorUtil.SERVERMANAGER_PTR_NAME + "->publish(\"" + topic + "\", serializedMsg" + count +");";
+				serialize = "ros::SerializedMessage serializedMsg" + count 
+						+ " = ros::serialization::serializeMessage(" + message + ");\n" 
+						+ GeneratorUtil.SERVERMANAGER_PTR_NAME + "->publish(\"" + topic 
+						+ "\", serializedMsg" + count +");";
 
 				accum += serialize;
 

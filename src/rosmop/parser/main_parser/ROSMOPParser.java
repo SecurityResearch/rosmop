@@ -351,7 +351,7 @@ public class ROSMOPParser implements ROSMOPParserConstants {
     topic = jj_consume_token(NAMING);
     msgType = jj_consume_token(NAMING);
     jj_consume_token(18);
-         pattern = pattern(pattern, ""); /*pattern = parseUntil("'"); /*System.out.println(pattern);*/
+         pattern = pattern(pattern, "");
     jj_consume_token(18);
     jj_consume_token(LBRACE);
          eventAction = parseMatchingCurlyBrackets();

@@ -10,7 +10,7 @@
 	<property environment="env"/>
 	<!-- <property name="rvmlib" value="${env.RVMONITOR}/lib" /> -->
     <path id="rosmop.classpath">
-		<fileset dir="${env.RVMONITOR}/lib" includes="**/*.jar"/>
+		<fileset dir="${env.RVMONITOR}" includes="**/*.jar"/>
     </path>
 	
 <!--checking if for windows and non windows OS-->
@@ -25,7 +25,7 @@
 	<!-- if the OS is windows call the target run.script.windows -->
 	<target name="ifNotUnix" if="isWindows">
 		<echo>Calling parser.bat</echo>
-		<exec dir="scripts" executable="cmd" failonerror="true">
+		<exec dir="bin" executable="cmd" failonerror="true">
 			<arg line="/c parsergen.bat"/>
 		</exec>
 	</target>
@@ -33,15 +33,15 @@
 	<!-- if the OS is not windows call the target run.script.unix-->
 	<target name="ifUnix" if="isUnix">
 		<echo>Calling parser</echo>
-	   	<exec executable="scripts/parsergen" failonerror="true"/>
+	   	<exec executable="bin/parsergen" failonerror="true"/>
 	</target>
 	
     <target name="init">
-        <mkdir dir="bin"/>
+        <mkdir dir="classes"/>
     </target>
 
     <target name="clean">
-        <delete dir="bin"/>
+        <delete dir="classes"/>
 		<delete dir="lib"/>
     </target>
 
@@ -51,11 +51,11 @@
 
     <target depends="init" name="build-project">
         <echo message="${ant.project.name}: ${ant.file}"/>
-        <javac destdir="bin" srcdir="src" source="${source}" target="${target}" includeantruntime="false" classpathref="rosmop.classpath" />
+        <javac destdir="classes" srcdir="src" source="${source}" target="${target}" includeantruntime="false" classpathref="rosmop.classpath" />
     </target>
 	
 	<target name="makejar" description="Create Jar file" depends="ifUnix, ifNotUnix, build">
 		<mkdir dir="lib" />
-        <jar jarfile="lib/ROSMOP.jar" basedir="bin" />
+        <jar jarfile="lib/ROSMOP.jar" basedir="classes" />
 	</target>
 </project>

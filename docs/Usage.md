@@ -1,5 +1,3 @@
-rosmop
-
 Usage:
 -One event specification (.rv) file
 rosmop a.rv

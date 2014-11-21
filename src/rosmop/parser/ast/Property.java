@@ -27,7 +27,8 @@ public class Property {
 	 * @param syntax The code describing the property.
 	 * @param handlers Handlers used to respond to states in the property.
 	 */
-	public Property(final String name, final String syntax, final List<PropertyHandler> handlers, final String specName) {
+	public Property(final String name, final String syntax, final List<PropertyHandler> handlers, 
+			final String specName) {
 		this.name = name;
 		this.syntax = syntax;
 		this.handlers = Collections.unmodifiableList(new ArrayList<PropertyHandler>(handlers));
@@ -39,7 +40,8 @@ public class Property {
 	private void createEventOutOfPublish(){
 
 		for (PropertyHandler propertyHandler : handlers) {
-			String preproc = propertyHandler.getAction(), publish, message, serialize, accum = "", topic, msgType;
+			String preproc = propertyHandler.getAction(), publish, message, serialize, 
+					accum = "", topic, msgType;
 			int i1 = 0, count = 1, i2, i3;
 
 			while(i1 < preproc.length()){
@@ -76,11 +78,15 @@ public class Property {
 					msgType = msgType.replaceAll("\"", "");
 					//				System.out.println(msgType);
 
-					Event pubevent = new Event(new ArrayList<String>(), "publish"+message+count, new ArrayList<String>(), "()", topic, msgType.replace("::", "/"), new HashMap<String, String>(), "{}", specName);
+					Event pubevent = new Event(new ArrayList<String>(), "publish"+message+count, 
+							new ArrayList<String>(), "()", topic, msgType.replace("::", "/"), 
+							new HashMap<String, String>(), "{}", specName);
 					publishKeywordEvents.add(pubevent);
 
-					serialize = "ros::SerializedMessage serializedMsg" + count +" = ros::serialization::serializeMessage(" + message + ");\n" 
-							+ GeneratorUtil.SERVERMANAGER_PTR_NAME + "->publish(\"" + topic + "\", serializedMsg" + count +");";
+					serialize = "ros::SerializedMessage serializedMsg" + count 
+							+ " = ros::serialization::serializeMessage(" + message + ");\n" 
+							+ GeneratorUtil.SERVERMANAGER_PTR_NAME + "->publish(\"" + topic 
+							+ "\", serializedMsg" + count +");";
 
 					accum += serialize;
 

@@ -19,7 +19,7 @@ public class Specification {
     private final List<Event> events;
     private final List<Property> properties;
     
-    private List<Variable> specDeclarations = new ArrayList<Variable>();;
+    private List<Variable> specDeclarations = new ArrayList<Variable>();
     
     /**
      * Construct the specification out of its children elements.
@@ -49,7 +49,8 @@ public class Specification {
     
     private void declarify() {
     	languageDeclarations = languageDeclarations.trim();
-    	languageDeclarations = languageDeclarations.replaceAll("(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)","");
+    	languageDeclarations = languageDeclarations
+    			.replaceAll("(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)","");
 		String[] vars = languageDeclarations.trim().split(";");
 		if(!languageDeclarations.isEmpty()){
 			for (String string : vars) {
@@ -114,5 +115,4 @@ public class Specification {
     public List<Property> getProperties() {
         return properties;
     }
-    
 }

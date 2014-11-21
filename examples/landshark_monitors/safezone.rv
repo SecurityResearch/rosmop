@@ -24,7 +24,7 @@ safeZone(){
 
 	}
 
-	event posCheck(double X, double Y, double Z) /landshark/gps_pose nav_msgs/Odometry '{pose: {pose: {position: {x:X, y:Y, z:Z}}}}'
+	event posCheck(double X, double Y, double Z) /landshark/gps_pose nav_msgs/Odometry '{pose: {position: {x:X, y:Y, z:Z}}}'
 	{
 		posx = X;
 		posy = Y;
