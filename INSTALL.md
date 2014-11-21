@@ -39,7 +39,7 @@ out the source code from the Github repository.
 2. Add `<rosmop_HOME>/bin` to your PATH.
 
 3. Run
- * `cd rosmop`
+ * `cd <rosmop_HOME>`
  * `ant`
 
 4. Make sure the build is successful.
