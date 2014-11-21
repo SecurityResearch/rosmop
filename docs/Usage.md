@@ -1,4 +1,6 @@
-## Usage
+# ROSMOP Usage
+
+## Commands
  * One event specification (.rv) file: `rosmop a.rv`
  * Multiple event specification (.rv) files: `rosmop a.rv b.rv ... z.rv`
  * Folder of *only* event specification (.rv) files: `rosmop specs/`
