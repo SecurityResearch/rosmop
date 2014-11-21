@@ -1,15 +1,11 @@
 Usage:
--One event specification (.rv) file
-rosmop a.rv
-
--Multiple event specification (.rv) files
-rosmop a.rv b.rv ... z.rv
-
--Folder of *only* event specification (.rv) files
-rosmop specs/
+ * One event specification (.rv) file: `rosmop a.rv`
+ * Multiple event specification (.rv) files: `rosmop a.rv b.rv ... z.rv`
+ * Folder of *only* event specification (.rv) files: `rosmop specs/`
 
 
 Event specification:
+```c++
 #include <library>
 spec(){
 	int i;
@@ -20,7 +16,7 @@ spec(){
 		//action code
 	}
 }
-
+```
 
 Event specification names are used to identify the monitors. By using those
 names, one can enable or disable desired monitors, and hence control which
@@ -51,6 +47,7 @@ there is such an invalid matching, the code will not be generated correctly.
 
 The following is an example for an event specification:
 
+```c++
 velocity(){
 	bool firstSlow = true;
 
@@ -69,3 +66,4 @@ velocity(){
 		 }
        }
 }
+```
