@@ -1,10 +1,15 @@
-Usage:
+## Usage
  * One event specification (.rv) file: `rosmop a.rv`
  * Multiple event specification (.rv) files: `rosmop a.rv b.rv ... z.rv`
  * Folder of *only* event specification (.rv) files: `rosmop specs/`
 
 
-Event specification:
+## Event specifications
+
+All the specifications are provided by users. ROSMOP generates C++ code automatically based on those specifications. Each event generates one call back method and all the call back methods are registered by RVMaster. Parameters of events are treated as references to fields in monitored messages, so users can modify messages in event handler code. Event handlers (i.e. actions) are inserted in call back methods and called by RVMaster at runtime. Event specification names are used to identify the monitors. By using those names, one can enable or disable desired monitors, and hence control which events take place. One shall create different specifications for each separate concern, so that disabling a monitor does not interfere with the functioning of others.
+
+Basic form of a user-defined event specification is the following:
+
 ```c++
 #include <library>
 spec(){
@@ -17,12 +22,6 @@ spec(){
 	}
 }
 ```
-
-Event specification names are used to identify the monitors. By using those
-names, one can enable or disable desired monitors, and hence control which
-events take place. One shall create different specifications for each separate
-concern, so that disabling a monitor does not interfere with the functioning of
-others.
 
 In an event specification, there can be multiple events and the user specified
 action codes of these different events can communicate through adding
@@ -45,25 +44,39 @@ should be compatible with the given message type. Furthermore, the variable
 names of the parameters and the ones in the pattern should match each other. If
 there is such an invalid matching, the code will not be generated correctly. 
 
-The following is an example for an event specification:
+
+## Example
+
+The following event specification defines a monitor which makes sure the robot doesn't shoot itself.
+In this specification, there are two events, `checkPosition` and `safeTrigger`, which have their own parameters and topics. On each topic, there can only be a certain type of message sent and received, which is also provided in the event signature. `checkPosition` event checks whether the gun is at a safe position to trigger, i.e. `position > -0.45` (not pointing at itself). It listens to topic `/landshark/joint_states` with the message type `sensor_msgs/JointState`. The fields of the message type can be accessed by providing the parameters of interest as done here; there are two arrays, `name` and `position`, which are bound to variables `N` and `P`, respectively. These parameters are used in the action code of the event to check the validity of the message content.
 
 ```c++
-velocity(){
-	bool firstSlow = true;
-
-	event twoTimesSlower(double lx, double ly, double lz, double ax, double ay, double az) /landshark_control/base_velocity geometry_msgs/TwistStamped '{twist:{angular:{x:ax,y:ay,z:az},linear:{x:lx,y:ly,z:lz}}}'
+#include <stdint.h>
+ 
+safeTrigger() {
+       bool isSafeTrigger = false;
+ 
+       event checkPosition(std::string monitored_name, double monitored_position) /landshark/joint_states sensor_msgs/JointState '{name[1]:monitored_name, position[1]:monitored_position}'
        {
-         lx = lx/2;
-         ly = ly/2;
-         lz = lz/2;
-         ax = ax/2;
-         ay = ay/2;
-         az = az/2;
-		 
-		 if(firstSlow){
-			ROS_INFO("Going 2x slower now");
-			firstSlow = false;
-		 }
+		if(monitored_name=="turret_tilt")
+		{
+			if(monitored_position > -0.45){
+				isSafeTrigger = true;
+				ROS_INFO("Safe to trigger");
+			}else{
+				isSafeTrigger = false;
+				ROS_INFO("Not safe to trigger");
+			}
+		}
+       }
+ 
+       event safeTrigger() /landshark_control/trigger landshark_msgs/PaintballTrigger '{}'
+       {
+		if(!isSafeTrigger)
+		{
+			ROS_WARN("Monitor: Not allowed to trigger in this pose!");
+			return;
+		}
        }
 }
 ```
